@@ -8,6 +8,12 @@ export interface HistoryReportLink {
 
 export interface ReviewQueueItem extends Vehicle {
   historyReportLinks: HistoryReportLink[];
+  price: number | null;
+  listingUrl: string | null;
+  imageUrl: string | null;
+  dealerName: string | null;
+  dealerCity: string | null;
+  dealerState: string | null;
 }
 
 export interface HistoryVerificationInput {
