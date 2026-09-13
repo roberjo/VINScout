@@ -6,6 +6,8 @@ Used Vehicle Opportunity Detection & Screening. VINScout discovers used-vehicle 
 
 See [`Technical _Specs.md`](./Technical%20_Specs.md) for the full spec (§48 tracks build-order status line by line) and [`docs/`](./docs) for how it maps onto this repo.
 
+**Access**: both the dashboard and the API are private, gated by Cloudflare Access — see `docs/access-control.md` for how (and why the obvious cross-origin approach didn't work).
+
 ## Core principle
 
 A vehicle with unverified or unacceptable history (accident, salvage title, flood, etc.) never receives an opportunity score, no matter how good its price looks. Unknown history is not treated as clean — and since there's no free, legal way to automate real history verification (see `docs/history-gate.md`), a human reviews it: the dashboard surfaces any Carfax/AutoCheck link a dealer published, and you record what you actually find.

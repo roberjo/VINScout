@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
 import type { Env } from "./env";
 import { vehicles } from "./api/vehicles";
 import { reviewQueue } from "./api/reviewQueue";
@@ -8,19 +7,19 @@ import { discoverListings } from "./jobs/discoverListings";
 
 const app = new Hono<{ Bindings: Env }>();
 
-// The dashboard (vinscout.johnbroberts.workers.dev) and this API
-// (vinscout-worker.johnbroberts.workers.dev) are different hostnames, each
-// behind its own Cloudflare Access application. A wildcard origin can't be
-// combined with credentialed requests, so the dashboard's exact origin is
-// named explicitly and credentials are allowed through — otherwise the
-// browser won't send the Access session cookie cross-origin at all.
-app.use(
-  "/api/*",
-  cors({
-    origin: "https://vinscout.johnbroberts.workers.dev",
-    credentials: true,
-  }),
-);
+// This Worker's hostname is never called directly by a browser anymore —
+// the web app proxies /api/* same-origin (apps/web/src/worker.ts) so there's
+// no cross-origin cookie/CORS problem for Cloudflare Access to solve. Access
+// protects the dashboard hostname; this shared-secret check is what protects
+// *this* hostname, since anyone who finds this raw URL would otherwise
+// bypass Access entirely (see docs/access-control.md).
+app.use("/api/*", async (c, next) => {
+  if (c.req.header("X-Internal-Proxy-Key") !== c.env.INTERNAL_PROXY_SECRET) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  await next();
+});
+
 app.route("/api/vehicles", vehicles);
 app.route("/api/review-queue", reviewQueue);
 app.route("/api/watchlists", watchlists);

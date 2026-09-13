@@ -3,18 +3,13 @@ import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
 import type { HistoryEvidenceEntry } from "../types/evidence";
 import type { DiscoveryPreferences, Watchlist } from "../types/preferences";
 
-// Empty string resolves to a relative /api path, which only works via the
-// Vite dev proxy (vite.config.ts) or if web+worker ever share a domain.
-// In production, VITE_API_URL points at the deployed Worker.
-const API_BASE = import.meta.env.VITE_API_URL ?? "";
-
-// The dashboard and the Worker API live on different hostnames, each behind
-// its own Cloudflare Access application — credentials: "include" is required
-// on every call so the browser sends the Access session cookie cross-origin
-// (paired with the Worker's CORS config naming this exact origin, since a
-// wildcard origin can't be combined with credentialed requests).
+// Relative path, same-origin in both dev (Vite's proxy, vite.config.ts) and
+// production (apps/web/src/worker.ts proxies /api/* to the backend Worker
+// server-side). Same-origin means no CORS/credentials concerns here at all —
+// Cloudflare Access, which protects this dashboard's hostname, has already
+// authenticated the browser by the time these calls run.
 function apiFetch(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`${API_BASE}${path}`, { ...init, credentials: "include" });
+  return fetch(path, init);
 }
 
 export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): Promise<VehicleWithListing[]> {

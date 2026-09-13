@@ -1,0 +1,7 @@
+# Overrides wrangler.jsonc's BACKEND_URL for local dev, so the proxy in
+# src/worker.ts talks to your local backend (wrangler dev, apps/worker) instead
+# of production.
+BACKEND_URL=http://localhost:8787
+
+# Must match apps/worker/.dev.vars's INTERNAL_PROXY_SECRET.
+INTERNAL_PROXY_SECRET=local-dev-only-not-a-real-secret

@@ -4,14 +4,11 @@ import { defineConfig } from 'vite'
 
 import { cloudflare } from "@cloudflare/vite-plugin";
 
-// https://vite.dev/config/
+// The cloudflare() plugin runs src/worker.ts (see wrangler.jsonc's "main")
+// inside Vite's own dev server, so /api/* is proxied by that script itself —
+// no separate Vite server.proxy needed. Point it at your local backend via
+// apps/web/.dev.vars's BACKEND_URL (copy .dev.vars.example); without that
+// override it defaults to wrangler.jsonc's production URL.
 export default defineConfig({
   plugins: [react(), tailwindcss(), cloudflare()],
-  server: {
-    proxy: {
-      // Run the worker locally with `npm run dev --workspace=@vinscout/worker`
-      // (wrangler dev, default port 8787) alongside this dev server.
-      '/api': 'http://localhost:8787',
-    },
-  },
 })
