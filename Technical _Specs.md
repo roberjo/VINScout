@@ -10,7 +10,7 @@ Primary objective: Continuously discover used-vehicle listings, normalize them b
 
 ---
 
-> **Implementation note (2026-09-13):** The repo follows this spec's stack as written — Vite+React on Cloudflare Pages, Cloudflare Workers for the API/scraping/cron, and D1 for storage — chosen specifically because it runs entirely on Cloudflare's free tier at hobby scale (Pages, Workers, D1, Cron Triggers, and Browser Rendering for headless scraping are all free within generous limits). An earlier Next.js scaffold was replaced with this structure for that reason.
+> **Implementation note (2026-09-14):** The repo follows this spec's stack as written — Vite+React on Cloudflare Pages, Cloudflare Workers for the API/cron, and D1 for storage — chosen specifically because it runs entirely on Cloudflare's free tier at hobby scale. Inventory comes from Auto.dev's licensed API rather than scraping (see §12, §48). The core pipeline (discover → normalize → dedup → history gate → manual verify → value/maintenance/opportunity scoring) is implemented and running in production; §48 tracks status line by line.
 
 ---
 
@@ -1685,11 +1685,11 @@ That behavior is intentional.
 Build in this order:
 
 1. Repository — ✅ Done
-2. D1 schema — ✅ Done (`migrations/0001_initial.sql`, `0002_indexes.sql`, `0003_history.sql`). Schema is written but not yet applied to a real D1 database — see §Cloudflare setup.
+2. D1 schema — ✅ Done (`migrations/0001_initial.sql` through `0004_listing_photo_count.sql`). Applied to both local and production D1.
 3. Domain models — ✅ Done (`packages/domain`)
 4. History gate — ✅ Done, unit tested (`packages/scoring/src/historyGate.ts`)
-5. Vehicle/listing API — 🟡 Partial. `GET /api/vehicles` and `GET /api/vehicles/:vin` exist (`apps/worker/src/api/vehicles.ts`) and read from D1, but there's no real data to read yet, and no write/ingest endpoints.
-6. React dashboard — 🟡 Partial. Fetches and renders the vehicles list (`apps/web`), but it's a single read-only table — no filters, watchlists, or detail view yet.
+5. Vehicle/listing API — ✅ Done for the current feature set. `GET /api/vehicles` (ranked, scored vehicles), `GET /api/vehicles/:vin`, `GET /api/vehicles/:vin/evidence`, `GET /api/review-queue`, and `PATCH /api/vehicles/:vin/history` (`apps/worker/src/api/`) are all live and backed by real D1 data. No watchlist endpoints yet (step 16).
+6. React dashboard — 🟡 Partial. Two working sections (`apps/web`): a ranked "Opportunities" table and a "Needs Review" queue with surfaced history-report links and an interactive verification form. No filters, watchlists, or a dedicated per-vehicle detail view yet.
 7. One inventory adapter — ✅ Done. `AutoDevInventorySource` (`packages/adapters/src/autoDevSource.ts`) pulls real listings from Auto.dev's licensed Vehicle Listings API (free tier, spec §12 priority 2), including any Carfax link the dealer published — verified end-to-end against production-schema local D1 with real vehicles from real dealers, all correctly `REJECTED` pending manual history review. AutoNation was evaluated and rejected as a scrape target (`robots.txt` disallows the search endpoint, and the site runs active bot detection) — see `docs/data-sources.md`. `FixtureInventorySource` remains for local pipeline testing, gated off in production.
 8. VIN deduplication — ✅ Done. `apps/worker/src/jobs/persistListing.ts` upserts one `vehicles` row per VIN and one `listings` row per (VIN, source, URL); verified idempotent — rerunning discovery doesn't create duplicate rows or spurious price-history entries.
 9. History provider abstraction — 🟡 Partial, deliberately manual. No free/legal automatable history API exists (NMVTIS costs per-lookup via approved providers; Carfax/AutoCheck are paid; NICB VINCheck's terms don't allow automation) — see `docs/history-gate.md`. Instead: any Carfax/AutoCheck link a dealer publishes on their own listing is auto-surfaced as `HistoryEvidence` (`recordHistoryReportLink`), never auto-fetched.
@@ -1698,7 +1698,7 @@ Build in this order:
 12. Maintenance engine — ✅ Done, v1 rule set. `evaluateMaintenanceRisk` (`packages/scoring/src/maintenanceRules.ts`) matches a small, intentionally conservative `MaintenanceRule` set (two generic wear items always shown as `UNKNOWN` dueness, matching the spec's own worked example, plus one well-documented model-specific rule) and produces a 0-100 sub-score. `apps/worker/src/maintenance/computeMaintenanceRisk.ts` writes it to `vehicles.maintenance_score`, triggered alongside the value engine right after history verification. Confidence is always `LOW` — no VIN-specific service records exist. Verified against the spec's own Highlander example (scores 96) and confirmed the Honda Pilot timing-belt rule's year range correctly excludes newer generations.
 13. Opportunity scoring — ✅ Done. All 7 factors now compute for real (`apps/worker/src/scoring/computeOpportunityScore.ts`): market price advantage and maintenance exposure from steps 11-12, mileage and age from simple pure functions, reliability/powertrain from NHTSA's free public Recalls API (recall count as a rough proxy — see `docs/scoring.md`), trim/equipment from a naming-convention heuristic, and dealer/listing quality from Auto.dev's photo count. Verified end-to-end against real Auto.dev inventory: two real vehicles produced correct `opportunity_score`s and appeared correctly ranked in `GET /api/vehicles` — the "Opportunities" dashboard list is no longer permanently empty.
 14. Second/third inventory adapters — ⬜ Not started
-15. Cron scheduling — 🟡 Partial. `apps/worker/wrangler.toml` defines the Cron Trigger (every 6 hours) and the Worker's `scheduled()` handler runs `discoverListings`, verified working via `wrangler dev --test-scheduled`. Still a no-op in production since no real source is registered (only the fixture, which is gated off there).
+15. Cron scheduling — ✅ Done. `apps/worker/wrangler.toml`'s Cron Trigger (every 6 hours) runs `discoverListings` against the live Auto.dev source in production — confirmed pulling real inventory into production D1. The fixture source remains registered-but-gated-off there (`ENABLE_FIXTURE_SOURCE=false`).
 16. Alerts — ⬜ Not started
 17. Price-history analytics — ⬜ Not started
 
