@@ -8,7 +8,7 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "vinscout"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "75ccb5c0-07fa-455f-8920-7001f9f7fe4e"
 migrations_dir = "../../migrations"
 
 # Runs the discovery/sync job on a schedule. Adjust cadence to taste —

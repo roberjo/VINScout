@@ -27,9 +27,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
+# env files — .env(.local) holds secrets and stays out of git;
+# .env.production/.env.example are public config and get committed.
+.env
+.env.local
+.env.*.local
 
 # cloudflare
 .wrangler/

@@ -14,7 +14,7 @@ A vehicle that fails the history gate never receives an opportunity score, and u
 
 ## Repo layout
 
-- `apps/web` — React + Vite dashboard, deployed to Cloudflare Pages.
+- `apps/web` — React + Vite dashboard, deployed as static assets on Cloudflare Workers (Cloudflare's unified successor to classic Pages) at [vinscout.johnbroberts.workers.dev](https://vinscout.johnbroberts.workers.dev).
 - `apps/worker` — Cloudflare Worker: HTTP API (`src/api`), discovery/normalization/history/scoring logic, and the cron-triggered discovery job (`src/jobs`).
 - `packages/domain` — Shared TypeScript types (`Vehicle`, `HistoryStatus`, `NormalizedListing`, `SearchCriteria`, ...).
 - `packages/scoring` — Pure scoring functions: the history gate and opportunity score (unit tested, no I/O).

@@ -12,11 +12,13 @@ A vehicle with unverified or unacceptable history (accident, salvage title, floo
 
 Chosen to run entirely on free tiers at hobby scale:
 
-- **Frontend**: React + Vite + Tailwind, deployed on Cloudflare Pages
-- **Backend**: Cloudflare Workers (Hono for routing), deployed via Wrangler
-- **Database**: Cloudflare D1 (SQLite)
-- **Scheduling**: Cloudflare Cron Triggers
-- **CI/CD**: GitHub Actions
+- **Frontend**: React + Vite + Tailwind, deployed as static assets on Cloudflare Workers — live at [vinscout.johnbroberts.workers.dev](https://vinscout.johnbroberts.workers.dev)
+- **Backend**: Cloudflare Workers (Hono for routing), deployed via Wrangler — live at [vinscout-worker.johnbroberts.workers.dev](https://vinscout-worker.johnbroberts.workers.dev)
+- **Database**: Cloudflare D1 (SQLite) — provisioned, migrations applied
+- **Scheduling**: Cloudflare Cron Triggers — wired up, runs every 6 hours (currently a no-op; see Project Status)
+- **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml` needs `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo secrets to run — deploys so far have been manual via `wrangler`)
+
+> Note: Cloudflare has folded classic "Pages" into the unified Workers platform (static assets + Workers in one deploy), which is what `apps/web`'s `wrangler.jsonc` now uses. Functionally this is the same free-tier static hosting the spec called for.
 
 ## Repo Layout
 
@@ -51,11 +53,10 @@ npm run dev:web      # terminal 2
 
 The Vite dev server proxies `/api/*` to the worker, so open [http://localhost:5173](http://localhost:5173).
 
-Apply D1 migrations locally:
+Apply D1 migrations locally (the D1 database itself already exists in Cloudflare — see below):
 
 ```bash
 cd apps/worker
-npx wrangler d1 create vinscout   # first time only; paste the resulting id into wrangler.toml
 npx wrangler d1 migrations apply vinscout --local
 ```
 
@@ -67,6 +68,24 @@ npm run lint
 npm test
 ```
 
+### Deploying
+
+Both apps deploy independently via Wrangler (manual for now; GitHub Actions automation is scaffolded but not yet wired to secrets):
+
+```bash
+npm run deploy --workspace=@vinscout/worker   # apps/worker/wrangler.toml
+npm run deploy --workspace=@vinscout/web      # apps/web/wrangler.jsonc
+```
+
+Applying a new migration to production:
+
+```bash
+cd apps/worker
+npx wrangler d1 migrations apply vinscout --remote
+```
+
 ## Project Status
 
-Foundational pieces are in place: domain model, history gate, opportunity-score weighting, D1 schema, and a vehicles API/dashboard wired end-to-end. No inventory adapters, market-value engine, or maintenance engine exist yet — see `docs/` for what's implemented vs. planned.
+Foundational pieces are in place and **deployed**: domain model, history gate, opportunity-score weighting, D1 schema (provisioned + migrated), and a vehicles API/dashboard wired end-to-end and live on Cloudflare. See `Technical _Specs.md` §48 for a step-by-step status against the spec's recommended build order.
+
+Not yet built: inventory adapters (so there's no real listing data yet — the API/dashboard are live but empty), VIN deduplication, history-provider integration, market-value engine, maintenance engine, alerts, and price-history analytics.
