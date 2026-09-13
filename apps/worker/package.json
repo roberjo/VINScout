@@ -7,7 +7,8 @@
     "dev": "wrangler dev",
     "build": "tsc --noEmit",
     "deploy": "wrangler deploy",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@vinscout/domain": "*",
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260911.1",
     "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
     "wrangler": "^4.31.1"
   }
 }

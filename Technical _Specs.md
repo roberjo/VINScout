@@ -1690,15 +1690,15 @@ Build in this order:
 4. History gate — ✅ Done, unit tested (`packages/scoring/src/historyGate.ts`)
 5. Vehicle/listing API — 🟡 Partial. `GET /api/vehicles` and `GET /api/vehicles/:vin` exist (`apps/worker/src/api/vehicles.ts`) and read from D1, but there's no real data to read yet, and no write/ingest endpoints.
 6. React dashboard — 🟡 Partial. Fetches and renders the vehicles list (`apps/web`), but it's a single read-only table — no filters, watchlists, or detail view yet.
-7. One inventory adapter — ⬜ Not started
-8. VIN deduplication — ⬜ Not started
+7. One inventory adapter — 🟡 Partial. `FixtureInventorySource` (`packages/adapters/src/fixtureSource.ts`) proves the full discover → normalize → dedup → history gate → persist pipeline against static sample data. No real (dealer/API/marketplace) source is connected yet, and the fixture is explicitly gated off in production (`ENABLE_FIXTURE_SOURCE=false` in `wrangler.toml`, `true` only via local `.dev.vars`) so it never writes fake data into the real D1 database.
+8. VIN deduplication — ✅ Done. `apps/worker/src/jobs/persistListing.ts` upserts one `vehicles` row per VIN and one `listings` row per (VIN, source, URL); verified idempotent — rerunning discovery doesn't create duplicate rows or spurious price-history entries.
 9. History provider abstraction — ⬜ Not started
 10. History verification — ⬜ Not started
 11. Market-value engine — ⬜ Not started
 12. Maintenance engine — ⬜ Not started
 13. Opportunity scoring — 🟡 Partial. The weighting function (`scoreOpportunity`) is implemented and tested against pre-computed 0-100 sub-scores, but nothing computes those sub-scores from real data yet (depends on steps 11-12).
 14. Second/third inventory adapters — ⬜ Not started
-15. Cron scheduling — 🟡 Partial. `apps/worker/wrangler.toml` defines the Cron Trigger and the Worker's `scheduled()` handler is wired up, but the job it calls (`discoverListings`) is a no-op until an adapter exists (step 7).
+15. Cron scheduling — 🟡 Partial. `apps/worker/wrangler.toml` defines the Cron Trigger (every 6 hours) and the Worker's `scheduled()` handler runs `discoverListings`, verified working via `wrangler dev --test-scheduled`. Still a no-op in production since no real source is registered (only the fixture, which is gated off there).
 16. Alerts — ⬜ Not started
 17. Price-history analytics — ⬜ Not started
 

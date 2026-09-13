@@ -15,3 +15,9 @@ migrations_dir = "../../migrations"
 # free-tier Cron Triggers support standard cron syntax.
 [triggers]
 crons = ["0 */6 * * *"]
+
+# The fixture adapter is for local pipeline testing only — it must stay off
+# in production so the live cron doesn't write fake data into real D1.
+# Local dev enables it via .dev.vars (gitignored), which overrides this.
+[vars]
+ENABLE_FIXTURE_SOURCE = "false"
