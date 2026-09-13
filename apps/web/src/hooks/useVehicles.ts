@@ -1,22 +1,23 @@
 import { useEffect, useState } from "react";
-import type { Vehicle } from "@vinscout/domain";
+import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
 import { fetchVehicles } from "../services/vehiclesApi";
 
 interface UseVehiclesResult {
-  vehicles: Vehicle[];
+  vehicles: VehicleWithListing[];
   loading: boolean;
   error: string | null;
 }
 
-export function useVehicles(): UseVehiclesResult {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+export function useVehicles(filters: VehicleFilters): UseVehiclesResult {
+  const [vehicles, setVehicles] = useState<VehicleWithListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
 
-    fetchVehicles()
+    fetchVehicles(filters)
       .then((data) => {
         if (!cancelled) setVehicles(data);
       })
@@ -30,7 +31,7 @@ export function useVehicles(): UseVehiclesResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filters.make, filters.priceMin, filters.priceMax, filters.mileageMax]);
 
   return { vehicles, loading, error };
 }

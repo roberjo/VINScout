@@ -1,16 +1,21 @@
+import { useState } from "react";
 import { useVehicles } from "../hooks/useVehicles";
 import { useReviewQueue } from "../hooks/useReviewQueue";
 import { VehicleTable } from "../components/VehicleTable";
 import { ReviewQueue } from "../components/ReviewQueue";
+import { FilterBar } from "../components/FilterBar";
+import type { VehicleFilters } from "../types/vehicle";
 
 export function Dashboard() {
-  const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const [filters, setFilters] = useState<VehicleFilters>({});
+  const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(filters);
   const { items: reviewItems, loading: reviewLoading, error: reviewError, removeItem } = useReviewQueue();
 
   return (
     <div className="space-y-8">
       <section>
         <h2 className="mb-3 text-lg font-semibold">Opportunities</h2>
+        <FilterBar filters={filters} onChange={setFilters} />
         {vehiclesLoading && <p className="text-slate-400">Loading vehicles…</p>}
         {vehiclesError && <p className="text-red-400">Error: {vehiclesError}</p>}
         {!vehiclesLoading && !vehiclesError && <VehicleTable vehicles={vehicles} />}

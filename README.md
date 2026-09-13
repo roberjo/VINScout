@@ -29,6 +29,7 @@ Chosen to run entirely on free tiers at hobby scale:
 - Every 6 hours, the Worker pulls real listings from Auto.dev around LaGrange, GA (the spec's default search area), dedupes them by VIN, and runs the history gate — every new vehicle starts `UNKNOWN` and is rejected pending review.
 - Any Carfax/AutoCheck link a dealer published gets surfaced automatically in the dashboard's "Needs Review" section — nothing is ever auto-fetched or auto-trusted.
 - Once you manually review a vehicle and submit the real flags, it's re-scored on all 7 spec-weighted factors (market price vs. comparables, mileage, maintenance exposure, reliability via NHTSA recalls, age, trim, listing photo quality) and — if it passed history — shows up ranked in the "Opportunities" list.
+- The Opportunities list is filterable (make/price/mileage), and clicking a row expands a detail view with the asking price, dealer info, a link to the original listing, the score breakdown, and the full history evidence log.
 
 ## Repo Layout
 

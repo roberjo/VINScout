@@ -1,15 +1,30 @@
-import type { Vehicle } from "@vinscout/domain";
 import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
+import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
+import type { HistoryEvidenceEntry } from "../types/evidence";
 
 // Empty string resolves to a relative /api path, which only works via the
 // Vite dev proxy (vite.config.ts) or if web+worker ever share a domain.
 // In production, VITE_API_URL points at the deployed Worker.
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
-export async function fetchVehicles(limit = 50): Promise<Vehicle[]> {
-  const res = await fetch(`${API_BASE}/api/vehicles?limit=${limit}`);
+export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): Promise<VehicleWithListing[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (filters.make) params.set("make", filters.make);
+  if (filters.priceMin != null) params.set("priceMin", String(filters.priceMin));
+  if (filters.priceMax != null) params.set("priceMax", String(filters.priceMax));
+  if (filters.mileageMax != null) params.set("mileageMax", String(filters.mileageMax));
+
+  const res = await fetch(`${API_BASE}/api/vehicles?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch vehicles: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchVehicleEvidence(vin: string): Promise<HistoryEvidenceEntry[]> {
+  const res = await fetch(`${API_BASE}/api/vehicles/${encodeURIComponent(vin)}/evidence`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch evidence: ${res.status}`);
   }
   return res.json();
 }

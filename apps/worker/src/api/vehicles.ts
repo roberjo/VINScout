@@ -15,6 +15,41 @@ interface HistoryEvidenceRow {
   retrieved_at: string;
 }
 
+// The vehicle's most recently seen active listing, joined in for display —
+// a vehicle can in principle have more than one (multiple sources), but we
+// only ever show the freshest one.
+interface ListingJoinFields {
+  listing_price: number | null;
+  listing_url: string | null;
+  listing_dealer_name: string | null;
+  listing_dealer_city: string | null;
+  listing_dealer_state: string | null;
+}
+
+type VehicleWithListingRow = VehicleRow & ListingJoinFields;
+
+function vehicleRowWithListingToDomain(row: VehicleWithListingRow) {
+  return {
+    ...vehicleRowToDomain(row),
+    price: row.listing_price,
+    listingUrl: row.listing_url,
+    dealerName: row.listing_dealer_name,
+    dealerCity: row.listing_dealer_city,
+    dealerState: row.listing_dealer_state,
+  };
+}
+
+// Picks each vehicle's single freshest active listing (ROW_NUMBER, not a
+// plain JOIN) so a vehicle with more than one active listing doesn't fan out
+// into duplicate rows.
+const CURRENT_LISTING_CTE = `
+  WITH current_listing AS (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY vin ORDER BY last_seen_at DESC) AS rn
+    FROM listings
+    WHERE active = 1
+  )
+`;
+
 export const vehicles = new Hono<{ Bindings: Env }>();
 
 // Only ACTIVE, history-approved vehicles are eligible for an opportunity
@@ -22,31 +57,70 @@ export const vehicles = new Hono<{ Bindings: Env }>();
 // ordering by opportunity_score here never surfaces a rejected vehicle.
 vehicles.get("/", async (c) => {
   const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
+  const make = c.req.query("make");
+  const priceMin = c.req.query("priceMin");
+  const priceMax = c.req.query("priceMax");
+  const mileageMax = c.req.query("mileageMax");
+
+  const conditions = ["v.status = 'ACTIVE'", "v.opportunity_score IS NOT NULL"];
+  const params: (string | number)[] = [];
+
+  if (make) {
+    conditions.push("v.make = ?");
+    params.push(make);
+  }
+  if (mileageMax) {
+    conditions.push("v.mileage <= ?");
+    params.push(Number(mileageMax));
+  }
+  if (priceMin) {
+    conditions.push("cl.price >= ?");
+    params.push(Number(priceMin));
+  }
+  if (priceMax) {
+    conditions.push("cl.price <= ?");
+    params.push(Number(priceMax));
+  }
+
+  params.push(limit);
 
   const { results } = await c.env.DB.prepare(
-    `SELECT * FROM vehicles
-     WHERE status = 'ACTIVE' AND opportunity_score IS NOT NULL
-     ORDER BY opportunity_score DESC
+    `${CURRENT_LISTING_CTE}
+     SELECT v.*, cl.price AS listing_price, cl.listing_url AS listing_url,
+            cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
+            cl.dealer_state AS listing_dealer_state
+     FROM vehicles v
+     LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
+     WHERE ${conditions.join(" AND ")}
+     ORDER BY v.opportunity_score DESC
      LIMIT ?`,
   )
-    .bind(limit)
-    .all<VehicleRow>();
+    .bind(...params)
+    .all<VehicleWithListingRow>();
 
-  return c.json(results.map(vehicleRowToDomain));
+  return c.json(results.map(vehicleRowWithListingToDomain));
 });
 
 vehicles.get("/:vin", async (c) => {
   const vin = c.req.param("vin");
 
-  const row = await c.env.DB.prepare("SELECT * FROM vehicles WHERE vin = ?")
+  const row = await c.env.DB.prepare(
+    `${CURRENT_LISTING_CTE}
+     SELECT v.*, cl.price AS listing_price, cl.listing_url AS listing_url,
+            cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
+            cl.dealer_state AS listing_dealer_state
+     FROM vehicles v
+     LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
+     WHERE v.vin = ?`,
+  )
     .bind(vin)
-    .first<VehicleRow>();
+    .first<VehicleWithListingRow>();
 
   if (!row) {
     return c.json({ error: "Not found" }, 404);
   }
 
-  return c.json(vehicleRowToDomain(row));
+  return c.json(vehicleRowWithListingToDomain(row));
 });
 
 vehicles.get("/:vin/evidence", async (c) => {
