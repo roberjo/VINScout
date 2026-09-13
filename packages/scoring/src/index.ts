@@ -2,3 +2,8 @@ export * from "./historyGate";
 export * from "./opportunityScore";
 export * from "./marketValue";
 export * from "./maintenanceRules";
+export * from "./ageScore";
+export * from "./mileageScore";
+export * from "./trimScore";
+export * from "./dealerQualityScore";
+export * from "./reliabilityScore";

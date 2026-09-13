@@ -56,4 +56,9 @@ describe("normalizeListing", () => {
     const normalized = normalizeListing(raw);
     expect(normalized.historyReportUrl).toBeUndefined();
   });
+
+  it("passes through photo count when the source reports it", () => {
+    const normalized = normalizeListing({ ...raw, raw: { ...raw.raw, photo_count: 24 } });
+    expect(normalized.photoCount).toBe(24);
+  });
 });

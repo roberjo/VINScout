@@ -23,6 +23,7 @@ export interface AutoDevListingItem {
     city?: string;
     state?: string;
     carfaxUrl?: string;
+    photoCount?: number;
   };
 }
 
@@ -70,6 +71,7 @@ export function mapAutoDevListingToRaw(item: AutoDevListingItem, fetchedAt: stri
       dealer_state: item.retailListing?.state ?? "",
       listing_url: listingUrl,
       history_report_url: item.retailListing?.carfaxUrl,
+      photo_count: item.retailListing?.photoCount,
     },
   };
 }

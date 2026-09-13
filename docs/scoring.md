@@ -18,7 +18,17 @@ Only vehicles that passed the history gate receive a score (0-100):
 
 Interpretation: 90-100 exceptional, 80-89 excellent, 70-79 strong, 60-69 fair, <60 weak.
 
-**Status:** the weighting function (`scoreOpportunity`) is implemented and tested against pre-computed 0-100 sub-scores. Two sub-scores — market price advantage and maintenance exposure — are now computed for real (see below). The rest (mileage, reliability/powertrain, trim/equipment, age, dealer/listing quality) aren't implemented yet, so `opportunity_score` stays unset and vehicles don't appear in the ranked "Opportunities" list even after being verified clean and scored on the two factors that do exist.
+**Status: fully implemented.** All 7 factors compute for real and `opportunity_score` populates the ranked "Opportunities" list. `apps/worker/src/scoring/computeOpportunityScore.ts` assembles them and runs right after market value + maintenance, at the end of manual history verification:
+
+- **Market price advantage** — from the value engine below (defaults to neutral 50 if there are no comparables yet).
+- **Mileage** — `mileageScore` (`packages/scoring/src/mileageScore.ts`): compares actual mileage to an expected ~12k mi/year baseline for the vehicle's age, centered at 50.
+- **Maintenance exposure** — from the maintenance engine below.
+- **Reliability/powertrain** — `computeReliabilityScore` (`apps/worker/src/scoring/computeReliabilitySignal.ts`) calls **NHTSA's free public Recalls API** (`recallsByVehicle`, no key/signup needed) and counts historical safety recall campaigns for the make/model/year; `reliabilityScoreFromRecallCount` maps that to 0-100 with a capped penalty so a heavily-recalled model doesn't hit 0. This counts *campaigns ever issued*, not confirmed-unresolved-for-this-VIN recalls — a rough proxy, same caveat as everything else here. Falls back to a neutral 50 if NHTSA is unreachable.
+- **Age** — `ageScore` (`packages/scoring/src/ageScore.ts`): 8 points off per year old, clamped.
+- **Trim/equipment** — `trimScore` (`packages/scoring/src/trimScore.ts`): no source gives a real options list, so this is a naming-convention heuristic — unknown trim is neutral, a known trim nudges up slightly, and a recognized "upper trim" keyword (Limited, Denali, Overland, Laramie, etc.) nudges up more. Will misjudge brands/models it doesn't recognize.
+- **Dealer/listing quality** — `dealerQualityScore` (`packages/scoring/src/dealerQualityScore.ts`): Auto.dev's `photoCount` field, scaled to 0-100 (20+ photos = max). Plumbed through `NormalizedListing.photoCount` → `listings.photo_count` (`migrations/0004_listing_photo_count.sql`). Unknown photo count is neutral, not penalized.
+
+All of the scoring constants above (weights within each factor, penalty rates, thresholds) are first-pass heuristics, not derived from data — documented as such in each function's own comments. Verified end-to-end locally against real Auto.dev inventory: two real vehicles (a 2020 Honda Pilot, a 2017 Jeep Wrangler) correctly produced `opportunity_score`s of 65.65 and 66.1 and appeared correctly sorted (highest first) in `GET /api/vehicles`.
 
 ## Value engine (spec §17) — implemented
 

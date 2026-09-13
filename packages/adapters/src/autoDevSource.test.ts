@@ -71,4 +71,12 @@ describe("mapAutoDevListingToRaw", () => {
     const raw = mapAutoDevListingToRaw({ ...FULL_ITEM, vehicle: { ...FULL_ITEM.vehicle, make: "Ram", model: 1500 } }, FETCHED_AT);
     expect(raw?.raw.model).toBe("1500");
   });
+
+  it("passes through photo count when Auto.dev reports one", () => {
+    const raw = mapAutoDevListingToRaw(
+      { ...FULL_ITEM, retailListing: { ...FULL_ITEM.retailListing, photoCount: 18 } },
+      FETCHED_AT,
+    );
+    expect(raw?.raw.photo_count).toBe(18);
+  });
 });

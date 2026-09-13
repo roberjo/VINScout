@@ -32,4 +32,8 @@ export interface NormalizedListing {
   // if any. Surfaced for a human to click through and verify manually —
   // never auto-fetched (see docs/history-gate.md for why).
   historyReportUrl?: string;
+
+  // Photo count, when the source reports it — used as a dealer/listing
+  // quality proxy (spec §18) since no source gives us anything richer.
+  photoCount?: number;
 }
