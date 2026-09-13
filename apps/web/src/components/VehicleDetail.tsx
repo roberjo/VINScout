@@ -19,6 +19,16 @@ const FLAG_LABELS: Array<[keyof VehicleWithListing, string]> = [
   ["odometerProblem", "Odometer problem"],
 ];
 
+const MAX_POSSIBLE_CONTRIBUTION = 30; // marketPriceAdvantage's weight (0.30) x a 100 score
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-0.5 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--ink-muted)" }}>
+      {children}
+    </div>
+  );
+}
+
 export function VehicleDetail({ vehicle }: { vehicle: VehicleWithListing }) {
   const [evidence, setEvidence] = useState<HistoryEvidenceEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,31 +51,33 @@ export function VehicleDetail({ vehicle }: { vehicle: VehicleWithListing }) {
   const tier = vehicle.opportunityScore != null ? scoreTier(vehicle.opportunityScore) : null;
 
   return (
-    <div className="grid grid-cols-1 gap-4 border-t border-slate-800 p-4 text-sm sm:grid-cols-[200px_1fr]">
+    <div
+      className="grid grid-cols-1 gap-5 p-5 text-sm sm:grid-cols-[200px_1fr]"
+      style={{ borderTop: "1px solid var(--border-strong)", background: "var(--surface-2)" }}
+    >
       <div className="space-y-2">
         {vehicle.imageUrl ? (
-          <img src={vehicle.imageUrl} alt="" className="w-full rounded object-cover" />
+          <img src={vehicle.imageUrl} alt="" className="w-full rounded-lg object-cover" />
         ) : (
-          <div className="flex h-36 w-full items-center justify-center rounded bg-slate-800 text-xs text-slate-500">
+          <div
+            className="flex h-36 w-full items-center justify-center rounded-lg text-xs"
+            style={{ background: "var(--border)", color: "var(--ink-muted)" }}
+          >
             No photo
           </div>
         )}
-        {tier && (
-          <div className={`rounded px-2 py-1 text-center text-sm font-medium ${tier.classes}`}>
-            {vehicle.opportunityScore?.toFixed(1)} · {tier.label}
-          </div>
-        )}
+        {tier && <span className={`badge ${tier.badgeClass} w-full justify-center py-1.5 text-sm`}>{vehicle.opportunityScore?.toFixed(1)} · {tier.label}</span>}
       </div>
 
       <div className="space-y-4">
         <div>
-          <div className="text-xs text-slate-400">Dealer</div>
+          <Label>Dealer</Label>
           <div>
             {vehicle.dealerName ?? "Unknown"}
             {vehicle.dealerCity && vehicle.dealerState ? ` — ${vehicle.dealerCity}, ${vehicle.dealerState}` : ""}
           </div>
           {vehicle.listingUrl && (
-            <a href={vehicle.listingUrl} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline">
+            <a href={vehicle.listingUrl} target="_blank" rel="noopener noreferrer" className="underline">
               View original listing ↗
             </a>
           )}
@@ -73,13 +85,19 @@ export function VehicleDetail({ vehicle }: { vehicle: VehicleWithListing }) {
 
         {vehicle.marketComparison && (
           <div>
-            <div className="text-xs text-slate-400">Why this price</div>
+            <Label>Why this price</Label>
             <div>
               Asking {currency.format(vehicle.marketComparison.askingPrice)} vs. an estimated market price of{" "}
               {currency.format(vehicle.marketComparison.estimatedMarketPrice)}, based on{" "}
               {vehicle.marketComparison.comparableCount} comparable listing
               {vehicle.marketComparison.comparableCount === 1 ? "" : "s"} —{" "}
-              <span className={vehicle.marketComparison.priceDifferencePercent < 0 ? "text-green-400" : "text-slate-300"}>
+              <span
+                className="font-medium"
+                style={{
+                  color:
+                    vehicle.marketComparison.priceDifferencePercent < 0 ? "var(--success-text)" : "var(--ink-primary)",
+                }}
+              >
                 {Math.abs(vehicle.marketComparison.priceDifferencePercent).toFixed(1)}%{" "}
                 {vehicle.marketComparison.priceDifferencePercent < 0 ? "below" : "above"} market
               </span>
@@ -90,30 +108,40 @@ export function VehicleDetail({ vehicle }: { vehicle: VehicleWithListing }) {
 
         {vehicle.scoreBreakdown && (
           <div>
-            <div className="mb-1 text-xs text-slate-400">Score breakdown</div>
-            <table className="w-full text-xs">
-              <tbody>
-                {vehicle.scoreBreakdown.map((entry) => (
-                  <tr key={entry.factor} className="border-t border-slate-800">
-                    <td className="py-1 pr-2 text-slate-300">{entry.label}</td>
-                    <td className="py-1 pr-2 text-slate-500">{(entry.weight * 100).toFixed(0)}%</td>
-                    <td className="py-1 pr-2">{entry.score.toFixed(0)}</td>
-                    <td className="py-1 text-right text-slate-400">+{entry.contribution.toFixed(1)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <Label>Score breakdown</Label>
+            <div className="space-y-1.5">
+              {vehicle.scoreBreakdown.map((entry) => (
+                <div key={entry.factor} className="flex items-center gap-2">
+                  <div className="w-40 shrink-0 text-xs" style={{ color: "var(--ink-secondary)" }}>
+                    {entry.label}
+                  </div>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full" style={{ background: "var(--border)" }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.min(100, (entry.contribution / MAX_POSSIBLE_CONTRIBUTION) * 100)}%`,
+                        background: "var(--accent)",
+                      }}
+                    />
+                  </div>
+                  <div className="w-20 shrink-0 text-right text-xs" style={{ color: "var(--ink-muted)" }}>
+                    {entry.score.toFixed(0)} × {(entry.weight * 100).toFixed(0)}%
+                  </div>
+                  <div className="w-12 shrink-0 text-right text-xs font-medium">+{entry.contribution.toFixed(1)}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         <div>
-          <div className="text-xs text-slate-400">History</div>
+          <Label>History</Label>
           <div>
             {vehicle.historyStatus}
             {vehicle.ownerCount != null ? ` · ${vehicle.ownerCount} owner(s)` : ""}
           </div>
           {reportedFlags.length > 0 && (
-            <ul className="mt-1 list-inside list-disc text-red-400">
+            <ul className="mt-1 list-inside list-disc" style={{ color: "var(--critical)" }}>
               {reportedFlags.map(([key, label]) => (
                 <li key={key}>{label}</li>
               ))}
@@ -122,17 +150,17 @@ export function VehicleDetail({ vehicle }: { vehicle: VehicleWithListing }) {
         </div>
 
         <div>
-          <div className="mb-1 text-xs text-slate-400">Evidence log</div>
-          {loading && <p className="text-slate-500">Loading…</p>}
-          {!loading && evidence.length === 0 && <p className="text-slate-500">No evidence recorded.</p>}
+          <Label>Evidence log</Label>
+          {loading && <p style={{ color: "var(--ink-muted)" }}>Loading…</p>}
+          {!loading && evidence.length === 0 && <p style={{ color: "var(--ink-muted)" }}>No evidence recorded.</p>}
           {!loading && evidence.length > 0 && (
             <ul className="space-y-1">
               {evidence.map((e) => (
-                <li key={e.id} className="text-slate-300">
-                  <span className="text-slate-500">{new Date(e.retrieved_at).toLocaleDateString()}</span> [
-                  {e.provider}/{e.event_type}]{" "}
+                <li key={e.id}>
+                  <span style={{ color: "var(--ink-muted)" }}>{new Date(e.retrieved_at).toLocaleDateString()}</span>{" "}
+                  [{e.provider}/{e.event_type}]{" "}
                   {e.source_url ? (
-                    <a href={e.source_url} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline">
+                    <a href={e.source_url} target="_blank" rel="noopener noreferrer" className="underline">
                       {e.source_url}
                     </a>
                   ) : (

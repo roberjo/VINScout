@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { VehicleFilters } from "../types/vehicle";
 
 interface Props {
@@ -5,25 +6,34 @@ interface Props {
   onChange: (filters: VehicleFilters) => void;
 }
 
+const inputStyle: CSSProperties = {
+  background: "var(--surface-2)",
+  border: "1px solid var(--border-strong)",
+  color: "var(--ink-primary)",
+};
+
 export function FilterBar({ filters, onChange }: Props) {
   const update = (patch: Partial<VehicleFilters>) => onChange({ ...filters, ...patch });
-
-  const inputClass = "w-28 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100";
+  const hasFilters = filters.make || filters.priceMin != null || filters.priceMax != null || filters.mileageMax != null;
 
   return (
-    <div className="mb-3 flex flex-wrap items-end gap-3">
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+    <div
+      className="mb-4 flex flex-wrap items-end gap-3 rounded-lg p-3"
+      style={{ background: "var(--page)", border: "1px solid var(--border)" }}
+    >
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Make
         <input
           type="text"
           value={filters.make ?? ""}
           onChange={(e) => update({ make: e.target.value || undefined })}
           placeholder="Any"
-          className={inputClass}
+          className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Min price
         <input
           type="number"
@@ -31,11 +41,12 @@ export function FilterBar({ filters, onChange }: Props) {
           value={filters.priceMin ?? ""}
           onChange={(e) => update({ priceMin: e.target.value ? Number(e.target.value) : undefined })}
           placeholder="$0"
-          className={inputClass}
+          className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Max price
         <input
           type="number"
@@ -43,11 +54,12 @@ export function FilterBar({ filters, onChange }: Props) {
           value={filters.priceMax ?? ""}
           onChange={(e) => update({ priceMax: e.target.value ? Number(e.target.value) : undefined })}
           placeholder="Any"
-          className={inputClass}
+          className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-xs text-slate-400">
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Max mileage
         <input
           type="number"
@@ -55,15 +67,17 @@ export function FilterBar({ filters, onChange }: Props) {
           value={filters.mileageMax ?? ""}
           onChange={(e) => update({ mileageMax: e.target.value ? Number(e.target.value) : undefined })}
           placeholder="Any"
-          className={inputClass}
+          className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
         />
       </label>
 
-      {(filters.make || filters.priceMin != null || filters.priceMax != null || filters.mileageMax != null) && (
+      {hasFilters && (
         <button
           type="button"
           onClick={() => onChange({})}
-          className="rounded border border-slate-700 px-2 py-1 text-sm text-slate-300"
+          className="rounded px-3 py-1.5 text-sm font-medium"
+          style={{ border: "1px solid var(--border-strong)", color: "var(--ink-secondary)" }}
         >
           Clear
         </button>

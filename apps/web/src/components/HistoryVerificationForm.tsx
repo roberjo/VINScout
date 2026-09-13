@@ -55,10 +55,10 @@ export function HistoryVerificationForm({ onSubmit }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mt-3 space-y-3 border-t border-slate-800 pt-3">
+    <form onSubmit={handleSubmit} className="mt-3 space-y-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
         {FLAG_LABELS.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 text-sm text-slate-300">
+          <label key={key} className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
             <input
               type="checkbox"
               checked={flags[key] as boolean}
@@ -71,14 +71,15 @@ export function HistoryVerificationForm({ onSubmit }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <label className="flex items-center gap-2 text-sm text-slate-300">
+        <label className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-secondary)" }}>
           Owner count
           <input
             type="number"
             min={1}
             value={ownerCount}
             onChange={(e) => setOwnerCount(e.target.value)}
-            className="w-16 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-slate-100"
+            className="w-16 rounded px-2 py-1"
+            style={{ border: "1px solid var(--border-strong)", background: "var(--surface-2)", color: "var(--ink-primary)" }}
           />
         </label>
       </div>
@@ -87,16 +88,18 @@ export function HistoryVerificationForm({ onSubmit }: Props) {
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
         placeholder="Notes (optional) — e.g. what the report said"
-        className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
+        className="w-full rounded px-2 py-1 text-sm"
+        style={{ border: "1px solid var(--border-strong)", background: "var(--surface-2)", color: "var(--ink-primary)" }}
         rows={2}
       />
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="badge badge-critical">{error}</p>}
 
       <button
         type="submit"
         disabled={submitting}
-        className="rounded bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-900 disabled:opacity-50"
+        className="rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50"
+        style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
       >
         {submitting ? "Saving…" : "Save review"}
       </button>

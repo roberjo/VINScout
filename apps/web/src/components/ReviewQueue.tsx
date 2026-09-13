@@ -21,7 +21,7 @@ export function ReviewQueue({
   const [expandedVin, setExpandedVin] = useState<string | null>(null);
 
   if (items.length === 0) {
-    return <p className="text-slate-400">Nothing waiting on review.</p>;
+    return <p style={{ color: "var(--ink-muted)" }}>Nothing waiting on review.</p>;
   }
 
   const handleSubmit = async (vin: string, input: HistoryVerificationInput) => {
@@ -33,11 +33,18 @@ export function ReviewQueue({
   return (
     <ul className="space-y-3">
       {items.map((item) => (
-        <li key={item.vin} className="flex gap-3 rounded border border-slate-800 p-3">
+        <li
+          key={item.vin}
+          className="flex gap-3 rounded-lg p-3"
+          style={{ border: "1px solid var(--border-strong)" }}
+        >
           {item.imageUrl ? (
             <img src={item.imageUrl} alt="" className="h-16 w-24 shrink-0 rounded object-cover" />
           ) : (
-            <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded bg-slate-800 text-xs text-slate-500">
+            <div
+              className="flex h-16 w-24 shrink-0 items-center justify-center rounded text-xs"
+              style={{ background: "var(--border)", color: "var(--ink-muted)" }}
+            >
               No photo
             </div>
           )}
@@ -48,7 +55,7 @@ export function ReviewQueue({
                 <div className="font-medium">
                   {item.year} {item.make} {item.model} {item.trim ?? ""}
                 </div>
-                <div className="text-sm text-slate-400">
+                <div className="text-sm" style={{ color: "var(--ink-secondary)" }}>
                   {item.price != null ? currency.format(item.price) : "—"} · {item.mileage.toLocaleString()} mi
                   {item.dealerName ? ` · ${item.dealerName}` : ""}
                 </div>
@@ -61,7 +68,7 @@ export function ReviewQueue({
                     href={link.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-sky-400 underline"
+                    className="text-sm underline"
                   >
                     {PROVIDER_LABEL[link.provider] ?? link.provider} report ↗
                   </a>
@@ -70,7 +77,8 @@ export function ReviewQueue({
                 <button
                   type="button"
                   onClick={() => setExpandedVin(expandedVin === item.vin ? null : item.vin)}
-                  className="rounded border border-slate-700 px-2 py-1 text-sm text-slate-300"
+                  className="rounded px-3 py-1 text-sm font-medium"
+                  style={{ border: "1px solid var(--border-strong)", color: "var(--ink-secondary)" }}
                 >
                   {expandedVin === item.vin ? "Cancel" : "Review"}
                 </button>

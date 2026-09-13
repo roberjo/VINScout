@@ -6,29 +6,50 @@ import { ReviewQueue } from "../components/ReviewQueue";
 import { FilterBar } from "../components/FilterBar";
 import type { VehicleFilters } from "../types/vehicle";
 
+function SectionCount({ n }: { n: number }) {
+  return (
+    <span
+      className="ml-2 rounded-full px-2 py-0.5 text-xs font-semibold"
+      style={{ background: "var(--border)", color: "var(--ink-secondary)" }}
+    >
+      {n}
+    </span>
+  );
+}
+
 export function Dashboard() {
   const [filters, setFilters] = useState<VehicleFilters>({});
   const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(filters);
   const { items: reviewItems, loading: reviewLoading, error: reviewError, removeItem } = useReviewQueue();
 
   return (
-    <div className="space-y-8">
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">Opportunities</h2>
+    <div className="space-y-6">
+      <section className="card p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="flex items-center text-base font-semibold">
+            Opportunities
+            {!vehiclesLoading && !vehiclesError && <SectionCount n={vehicles.length} />}
+          </h2>
+        </div>
         <FilterBar filters={filters} onChange={setFilters} />
-        {vehiclesLoading && <p className="text-slate-400">Loading vehicles…</p>}
-        {vehiclesError && <p className="text-red-400">Error: {vehiclesError}</p>}
+        {vehiclesLoading && <p style={{ color: "var(--ink-muted)" }}>Loading vehicles…</p>}
+        {vehiclesError && (
+          <p className="badge badge-critical">Error: {vehiclesError}</p>
+        )}
         {!vehiclesLoading && !vehiclesError && <VehicleTable vehicles={vehicles} />}
       </section>
 
-      <section>
-        <h2 className="mb-1 text-lg font-semibold">Needs Review</h2>
-        <p className="mb-3 text-sm text-slate-400">
+      <section className="card p-5">
+        <h2 className="flex items-center text-base font-semibold">
+          Needs Review
+          {!reviewLoading && !reviewError && <SectionCount n={reviewItems.length} />}
+        </h2>
+        <p className="mb-4 mt-1 text-sm" style={{ color: "var(--ink-muted)" }}>
           Rejected for unverified history. Click through any surfaced report link and record what you find —
           nothing here was auto-checked.
         </p>
-        {reviewLoading && <p className="text-slate-400">Loading review queue…</p>}
-        {reviewError && <p className="text-red-400">Error: {reviewError}</p>}
+        {reviewLoading && <p style={{ color: "var(--ink-muted)" }}>Loading review queue…</p>}
+        {reviewError && <p className="badge badge-critical">Error: {reviewError}</p>}
         {!reviewLoading && !reviewError && <ReviewQueue items={reviewItems} onVerified={removeItem} />}
       </section>
     </div>
