@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import type { Env } from "./env";
 import { vehicles } from "./api/vehicles";
 import { reviewQueue } from "./api/reviewQueue";
-import { preferences } from "./api/preferences";
+import { watchlists } from "./api/watchlists";
 import { discoverListings } from "./jobs/discoverListings";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -11,7 +11,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.use("/api/*", cors());
 app.route("/api/vehicles", vehicles);
 app.route("/api/review-queue", reviewQueue);
-app.route("/api/preferences", preferences);
+app.route("/api/watchlists", watchlists);
 
 app.get("/health", (c) => c.json({ ok: true }));
 

@@ -6,8 +6,8 @@ import { normalizeListing } from "../normalization/normalizeListing";
 import { persistNormalizedListing } from "./persistListing";
 
 // Spec §16 — default search area (LaGrange/Newnan/Carrollton/Peachtree City, GA).
-// Fixed regardless of saved preferences — those only narrow price/mileage/
-// year/make/model (see loadDiscoveryPreferences), not the search area.
+// Fixed regardless of saved watchlists — those only narrow price/mileage/
+// year/make/model (see buildCriteria), not the search area.
 const BASE_CRITERIA: SearchCriteria = {
   location: { latitude: 33.0201, longitude: -84.7997, radiusMiles: 50 },
   requireCleanHistory: true,
@@ -15,27 +15,34 @@ const BASE_CRITERIA: SearchCriteria = {
 };
 
 // Auto.dev filters by ZIP, not lat/lon — 30240 is LaGrange, GA (spec §16's
-// primary search area). maxPages: 1 keeps this at ~4 calls/day (~120/month),
-// well inside the free plan's 1,000/month cap.
+// primary search area). maxPages: 1 keeps each pass at ~4 calls/day; with up
+// to 3 watchlists (apps/worker/src/api/watchlists.ts's cap) that's still
+// ~360 calls/month, comfortably under the free plan's 1,000/month cap.
 const AUTODEV_ZIP = "30240";
 const AUTODEV_DISTANCE_MILES = 50;
 const AUTODEV_MAX_PAGES = 1;
 
-// The user's saved "personal taste" filter (PUT /api/preferences, stored in
-// the `watchlists` table) — applied at discovery time so a vehicle outside
-// it never enters the pipeline, and therefore never reaches manual Carfax
-// review. Falls back to no extra filtering if nothing's been saved yet.
-async function loadDiscoveryPreferences(env: Env): Promise<DiscoveryPreferences> {
-  const row = await env.DB.prepare("SELECT criteria_json FROM watchlists WHERE name = 'default'").first<{
-    criteria_json: string;
-  }>();
-  if (!row) return {};
+interface WatchlistRow {
+  criteria_json: string;
+}
 
-  try {
-    return JSON.parse(row.criteria_json) as DiscoveryPreferences;
-  } catch {
-    return {};
-  }
+// The user's saved "personal taste" filters (spec §14 watchlists — full CRUD
+// at /api/watchlists) — applied at discovery time so a vehicle outside every
+// saved watchlist never enters the pipeline, and therefore never reaches
+// manual Carfax review. Each watchlist runs as its own discovery pass; with
+// none saved, discovery runs unfiltered (today's earlier default).
+async function loadWatchlistCriteria(env: Env): Promise<DiscoveryPreferences[]> {
+  const { results } = await env.DB.prepare("SELECT criteria_json FROM watchlists").all<WatchlistRow>();
+
+  return results
+    .map((row) => {
+      try {
+        return JSON.parse(row.criteria_json) as DiscoveryPreferences;
+      } catch {
+        return null;
+      }
+    })
+    .filter((c): c is DiscoveryPreferences => c !== null);
 }
 
 function buildCriteria(preferences: DiscoveryPreferences): SearchCriteria {
@@ -78,21 +85,25 @@ function registeredSources(env: Env): InventorySource[] {
 }
 
 export async function discoverListings(env: Env): Promise<void> {
-  const preferences = await loadDiscoveryPreferences(env);
-  const criteria = buildCriteria(preferences);
+  const watchlistCriteria = await loadWatchlistCriteria(env);
+  // No saved watchlists yet: one unfiltered pass, same as before this feature.
+  const criteriaList = watchlistCriteria.length > 0 ? watchlistCriteria.map(buildCriteria) : [buildCriteria({})];
 
   for (const source of registeredSources(env)) {
-    try {
-      const raw = await source.discover(criteria);
-      console.log(`discoverListings: ${source.name} returned ${raw.length} listing(s)`);
+    for (const criteria of criteriaList) {
+      try {
+        const raw = await source.discover(criteria);
+        console.log(`discoverListings: ${source.name} returned ${raw.length} listing(s)`);
 
-      for (const rawListing of raw) {
-        const normalized = normalizeListing(rawListing);
-        await persistNormalizedListing(env, normalized);
+        for (const rawListing of raw) {
+          const normalized = normalizeListing(rawListing);
+          await persistNormalizedListing(env, normalized);
+        }
+      } catch (err) {
+        // One source/watchlist failing (rate limit, outage, bad key)
+        // shouldn't block the others.
+        console.error(`discoverListings: ${source.name} failed`, err);
       }
-    } catch (err) {
-      // One source failing (rate limit, outage, bad key) shouldn't block others.
-      console.error(`discoverListings: ${source.name} failed`, err);
     }
   }
 }

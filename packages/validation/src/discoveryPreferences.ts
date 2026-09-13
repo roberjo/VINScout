@@ -17,3 +17,14 @@ export const discoveryPreferencesSchema = z.object({
 });
 
 export type DiscoveryPreferences = z.infer<typeof discoveryPreferencesSchema>;
+
+// spec §14 — watchlists (id, name, criteria_json, created_at). Each named
+// watchlist is applied as its own discovery pass, so the count is capped
+// (see apps/worker/src/api/watchlists.ts) to protect the free-tier API quota.
+export const watchlistInputSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  criteria: discoveryPreferencesSchema,
+});
+
+export type WatchlistInput = z.infer<typeof watchlistInputSchema>;
+

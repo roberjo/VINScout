@@ -1,7 +1,7 @@
 import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
 import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
 import type { HistoryEvidenceEntry } from "../types/evidence";
-import type { DiscoveryPreferences } from "../types/preferences";
+import type { DiscoveryPreferences, Watchlist } from "../types/preferences";
 
 // Empty string resolves to a relative /api path, which only works via the
 // Vite dev proxy (vite.config.ts) or if web+worker ever share a domain.
@@ -38,23 +38,42 @@ export async function fetchReviewQueue(limit = 50): Promise<ReviewQueueItem[]> {
   return res.json();
 }
 
-export async function fetchDiscoveryPreferences(): Promise<DiscoveryPreferences> {
-  const res = await fetch(`${API_BASE}/api/preferences`);
+export async function fetchWatchlists(): Promise<Watchlist[]> {
+  const res = await fetch(`${API_BASE}/api/watchlists`);
   if (!res.ok) {
-    throw new Error(`Failed to fetch preferences: ${res.status}`);
+    throw new Error(`Failed to fetch saved searches: ${res.status}`);
   }
   return res.json();
 }
 
-export async function saveDiscoveryPreferences(prefs: DiscoveryPreferences): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/preferences`, {
+async function throwApiError(res: Response, fallback: string): Promise<never> {
+  const body = await res.json().catch(() => null);
+  throw new Error((body && typeof body === "object" && "error" in body && String(body.error)) || fallback);
+}
+
+export async function createWatchlist(name: string, criteria: DiscoveryPreferences): Promise<Watchlist> {
+  const res = await fetch(`${API_BASE}/api/watchlists`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, criteria }),
+  });
+  if (!res.ok) return throwApiError(res, `Failed to create saved search: ${res.status}`);
+  return res.json();
+}
+
+export async function updateWatchlist(id: number, name: string, criteria: DiscoveryPreferences): Promise<Watchlist> {
+  const res = await fetch(`${API_BASE}/api/watchlists/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(prefs),
+    body: JSON.stringify({ name, criteria }),
   });
-  if (!res.ok) {
-    throw new Error(`Failed to save preferences: ${res.status}`);
-  }
+  if (!res.ok) return throwApiError(res, `Failed to update saved search: ${res.status}`);
+  return res.json();
+}
+
+export async function deleteWatchlist(id: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/watchlists/${id}`, { method: "DELETE" });
+  if (!res.ok) return throwApiError(res, `Failed to delete saved search: ${res.status}`);
 }
 
 export async function submitHistoryVerification(vin: string, input: HistoryVerificationInput): Promise<void> {

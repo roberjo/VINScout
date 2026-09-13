@@ -7,3 +7,10 @@ export interface DiscoveryPreferences {
   yearMin?: number;
   yearMax?: number;
 }
+
+export interface Watchlist {
+  id: number;
+  name: string;
+  criteria: DiscoveryPreferences;
+  createdAt?: string;
+}
