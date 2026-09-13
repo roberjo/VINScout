@@ -10,6 +10,10 @@ Primary objective: Continuously discover used-vehicle listings, normalize them b
 
 ---
 
+> **Implementation note (2026-09-13):** The repo follows this spec's stack as written — Vite+React on Cloudflare Pages, Cloudflare Workers for the API/scraping/cron, and D1 for storage — chosen specifically because it runs entirely on Cloudflare's free tier at hobby scale (Pages, Workers, D1, Cron Triggers, and Browser Rendering for headless scraping are all free within generous limits). An earlier Next.js scaffold was replaced with this structure for that reason.
+
+---
+
 1. Product Objective
 
 VINScout is a web application for identifying unusually good used-vehicle opportunities within a configurable geographic area.

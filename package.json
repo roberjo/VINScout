@@ -4,13 +4,14 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "services/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=@vinscout/web",
+    "dev:web": "npm run dev --workspace=@vinscout/web",
+    "dev:worker": "npm run dev --workspace=@vinscout/worker",
     "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "engines": {
     "node": ">=20"

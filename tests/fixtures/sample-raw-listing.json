@@ -1,0 +1,18 @@
+{
+  "source": "dealer-site-example",
+  "url": "https://example-dealer.com/inventory/5TDBZRFH1KS000000",
+  "fetchedAt": "2026-09-01T12:00:00Z",
+  "raw": {
+    "vin": "5TDBZRFH1KS000000",
+    "year": 2019,
+    "make": "Toyota",
+    "model": "Highlander",
+    "trim": "XLE",
+    "mileage": 96000,
+    "price": 23400,
+    "dealer_name": "Example Toyota",
+    "dealer_city": "Newnan",
+    "dealer_state": "GA",
+    "listing_url": "https://example-dealer.com/inventory/5TDBZRFH1KS000000"
+  }
+}

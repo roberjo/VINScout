@@ -1,0 +1,24 @@
+{
+  "name": "@vinscout/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vinscout/domain": "*",
+    "@vinscout/scoring": "*",
+    "@vinscout/adapters": "*",
+    "@vinscout/validation": "*",
+    "hono": "^4.13.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260911.1",
+    "typescript": "^5.7.3",
+    "wrangler": "^4.31.1"
+  }
+}

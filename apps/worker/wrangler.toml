@@ -1,0 +1,17 @@
+name = "vinscout-worker"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Create with: wrangler d1 create vinscout
+# then paste the resulting database_id below.
+[[d1_databases]]
+binding = "DB"
+database_name = "vinscout"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "../../migrations"
+
+# Runs the discovery/sync job on a schedule. Adjust cadence to taste —
+# free-tier Cron Triggers support standard cron syntax.
+[triggers]
+crons = ["0 */6 * * *"]
