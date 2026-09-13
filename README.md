@@ -13,17 +13,46 @@ VINScout aggregates car listings from multiple sources and analyzes them for con
 
 - [Next.js](https://nextjs.org) (App Router, TypeScript)
 - [Tailwind CSS](https://tailwindcss.com)
+- npm workspaces monorepo
+
+## Repo Layout
+
+```
+apps/
+  web/              Next.js frontend (@vinscout/web)
+services/           Backend application services (scrapers, API, deal-scoring, ...)
+                     — see services/README.md for how to add one
+packages/
+  shared-types/      Domain types shared across apps and services (@vinscout/shared-types)
+```
+
+This structure is meant to grow: new backend services (e.g. a listing scraper, a
+deal-scoring worker, a public API) go under `services/` as their own workspace
+packages, sharing domain types and utilities via `packages/*` rather than
+duplicating them.
 
 ## Getting Started
 
-Install dependencies and run the dev server:
+Install dependencies (from the repo root):
 
 ```bash
 npm install
+```
+
+Run the web app in dev mode:
+
+```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
+
+Build/lint across every workspace:
+
+```bash
+npm run build
+npm run lint
+```
 
 ## Project Status
 
