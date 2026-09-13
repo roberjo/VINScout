@@ -1,6 +1,7 @@
 import { HistoryStatus, type NormalizedListing } from "@vinscout/domain";
 import { evaluateHistory } from "@vinscout/scoring";
 import type { Env } from "../env";
+import { detectHistoryProvider } from "../history/detectHistoryProvider";
 
 // Spec §13 — VIN Deduplication. One `vehicles` row per VIN regardless of how
 // many sources list it; each source/listing gets its own `listings` row.
@@ -60,6 +61,10 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
     }
   }
 
+  if (listing.historyReportUrl) {
+    await recordHistoryReportLink(env, listing.vin, listing.historyReportUrl, listing.observedAt);
+  }
+
   const existingListing = await env.DB.prepare(
     "SELECT id, price FROM listings WHERE vin = ? AND source = ? AND listing_url = ?",
   )
@@ -100,5 +105,24 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
 
   await env.DB.prepare("INSERT INTO price_history (vin, price, observed_at, source) VALUES (?, ?, ?, ?)")
     .bind(listing.vin, listing.price, listing.observedAt, listing.source)
+    .run();
+}
+
+// Surfaces a Carfax/AutoCheck link the dealer published on their own listing
+// page as HistoryEvidence, for a human to click through and verify manually
+// (see docs/history-gate.md — this deliberately never fetches the report
+// itself). Dedup'd by (vin, source_url) so repeated cron runs don't pile up
+// duplicate evidence rows for the same static link.
+async function recordHistoryReportLink(env: Env, vin: string, sourceUrl: string, retrievedAt: string): Promise<void> {
+  const existing = await env.DB.prepare("SELECT id FROM history_evidence WHERE vin = ? AND source_url = ?")
+    .bind(vin, sourceUrl)
+    .first<{ id: number }>();
+  if (existing) return;
+
+  await env.DB.prepare(
+    `INSERT INTO history_evidence (vin, provider, event_type, source_url, retrieved_at)
+     VALUES (?, ?, 'REPORT_LINK', ?, ?)`,
+  )
+    .bind(vin, detectHistoryProvider(sourceUrl), sourceUrl, retrievedAt)
     .run();
 }

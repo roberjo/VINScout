@@ -15,6 +15,7 @@ interface RawListingFields {
   dealer_city: string;
   dealer_state: string;
   listing_url: string;
+  history_report_url?: string;
 }
 
 export function normalizeListing(raw: RawListing): NormalizedListing {
@@ -35,5 +36,6 @@ export function normalizeListing(raw: RawListing): NormalizedListing {
     source: raw.source,
     discoveredAt: raw.fetchedAt,
     observedAt: raw.fetchedAt,
+    historyReportUrl: fields.history_report_url,
   };
 }

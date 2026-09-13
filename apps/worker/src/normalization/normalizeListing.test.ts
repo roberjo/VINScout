@@ -42,4 +42,18 @@ describe("normalizeListing", () => {
       observedAt: "2026-09-01T12:00:00.000Z",
     });
   });
+
+  it("passes through a history report link when the dealer published one", () => {
+    const normalized = normalizeListing({
+      ...raw,
+      raw: { ...raw.raw, history_report_url: "https://www.carfax.com/vehicle/5TDBZRFH1KS000001" },
+    });
+
+    expect(normalized.historyReportUrl).toBe("https://www.carfax.com/vehicle/5TDBZRFH1KS000001");
+  });
+
+  it("leaves the history report link undefined when the dealer didn't publish one", () => {
+    const normalized = normalizeListing(raw);
+    expect(normalized.historyReportUrl).toBeUndefined();
+  });
 });

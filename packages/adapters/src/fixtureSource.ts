@@ -17,6 +17,9 @@ const FIXTURE_RAW_DATA = [
     dealer_city: "Newnan",
     dealer_state: "GA",
     listing_url: "https://example-dealer.test/inventory/5TDBZRFH1KS000001",
+    // Demonstrates link detection — dealers commonly publish a free
+    // Carfax/AutoCheck link right on the listing page.
+    history_report_url: "https://www.carfax.com/vehicle/5TDBZRFH1KS000001",
   },
   {
     vin: "5FNYF6H07KB000002",

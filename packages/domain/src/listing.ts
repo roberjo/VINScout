@@ -27,4 +27,9 @@ export interface NormalizedListing {
 
   discoveredAt: string;
   observedAt: string;
+
+  // A Carfax/AutoCheck link the dealer published on their own listing page,
+  // if any. Surfaced for a human to click through and verify manually —
+  // never auto-fetched (see docs/history-gate.md for why).
+  historyReportUrl?: string;
 }

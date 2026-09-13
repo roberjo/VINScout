@@ -1692,8 +1692,8 @@ Build in this order:
 6. React dashboard — 🟡 Partial. Fetches and renders the vehicles list (`apps/web`), but it's a single read-only table — no filters, watchlists, or detail view yet.
 7. One inventory adapter — 🟡 Partial. `FixtureInventorySource` (`packages/adapters/src/fixtureSource.ts`) proves the full discover → normalize → dedup → history gate → persist pipeline against static sample data. No real (dealer/API/marketplace) source is connected yet, and the fixture is explicitly gated off in production (`ENABLE_FIXTURE_SOURCE=false` in `wrangler.toml`, `true` only via local `.dev.vars`) so it never writes fake data into the real D1 database.
 8. VIN deduplication — ✅ Done. `apps/worker/src/jobs/persistListing.ts` upserts one `vehicles` row per VIN and one `listings` row per (VIN, source, URL); verified idempotent — rerunning discovery doesn't create duplicate rows or spurious price-history entries.
-9. History provider abstraction — ⬜ Not started
-10. History verification — ⬜ Not started
+9. History provider abstraction — 🟡 Partial, deliberately manual. No free/legal automatable history API exists (NMVTIS costs per-lookup via approved providers; Carfax/AutoCheck are paid; NICB VINCheck's terms don't allow automation) — see `docs/history-gate.md`. Instead: any Carfax/AutoCheck link a dealer publishes on their own listing is auto-surfaced as `HistoryEvidence` (`recordHistoryReportLink`), never auto-fetched.
+10. History verification — ✅ Done, as a human-in-the-loop step. `PATCH /api/vehicles/:vin/history` (`apps/worker/src/history/verifyHistory.ts`) takes a person's manual review, re-runs the real history gate, and persists the result + an audit-trail evidence row. Surfaced in the dashboard's "Needs Review" section.
 11. Market-value engine — ⬜ Not started
 12. Maintenance engine — ⬜ Not started
 13. Opportunity scoring — 🟡 Partial. The weighting function (`scoreOpportunity`) is implemented and tested against pre-computed 0-100 sub-scores, but nothing computes those sub-scores from real data yet (depends on steps 11-12).
