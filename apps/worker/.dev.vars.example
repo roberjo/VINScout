@@ -1,1 +1,5 @@
 ENABLE_FIXTURE_SOURCE=true
+
+# Get a free key at https://www.auto.dev (no card required, 1,000 calls/month).
+# Leave unset to skip the Auto.dev source entirely.
+AUTODEV_API_KEY=
