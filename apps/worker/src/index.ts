@@ -8,7 +8,19 @@ import { discoverListings } from "./jobs/discoverListings";
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.use("/api/*", cors());
+// The dashboard (vinscout.johnbroberts.workers.dev) and this API
+// (vinscout-worker.johnbroberts.workers.dev) are different hostnames, each
+// behind its own Cloudflare Access application. A wildcard origin can't be
+// combined with credentialed requests, so the dashboard's exact origin is
+// named explicitly and credentials are allowed through — otherwise the
+// browser won't send the Access session cookie cross-origin at all.
+app.use(
+  "/api/*",
+  cors({
+    origin: "https://vinscout.johnbroberts.workers.dev",
+    credentials: true,
+  }),
+);
 app.route("/api/vehicles", vehicles);
 app.route("/api/review-queue", reviewQueue);
 app.route("/api/watchlists", watchlists);

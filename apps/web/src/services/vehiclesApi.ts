@@ -8,6 +8,15 @@ import type { DiscoveryPreferences, Watchlist } from "../types/preferences";
 // In production, VITE_API_URL points at the deployed Worker.
 const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
+// The dashboard and the Worker API live on different hostnames, each behind
+// its own Cloudflare Access application — credentials: "include" is required
+// on every call so the browser sends the Access session cookie cross-origin
+// (paired with the Worker's CORS config naming this exact origin, since a
+// wildcard origin can't be combined with credentialed requests).
+function apiFetch(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(`${API_BASE}${path}`, { ...init, credentials: "include" });
+}
+
 export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): Promise<VehicleWithListing[]> {
   const params = new URLSearchParams({ limit: String(limit) });
   if (filters.make) params.set("make", filters.make);
@@ -15,7 +24,7 @@ export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): P
   if (filters.priceMax != null) params.set("priceMax", String(filters.priceMax));
   if (filters.mileageMax != null) params.set("mileageMax", String(filters.mileageMax));
 
-  const res = await fetch(`${API_BASE}/api/vehicles?${params.toString()}`);
+  const res = await apiFetch(`/api/vehicles?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch vehicles: ${res.status}`);
   }
@@ -23,7 +32,7 @@ export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): P
 }
 
 export async function fetchVehicleEvidence(vin: string): Promise<HistoryEvidenceEntry[]> {
-  const res = await fetch(`${API_BASE}/api/vehicles/${encodeURIComponent(vin)}/evidence`);
+  const res = await apiFetch(`/api/vehicles/${encodeURIComponent(vin)}/evidence`);
   if (!res.ok) {
     throw new Error(`Failed to fetch evidence: ${res.status}`);
   }
@@ -31,7 +40,7 @@ export async function fetchVehicleEvidence(vin: string): Promise<HistoryEvidence
 }
 
 export async function fetchReviewQueue(limit = 50): Promise<ReviewQueueItem[]> {
-  const res = await fetch(`${API_BASE}/api/review-queue?limit=${limit}`);
+  const res = await apiFetch(`/api/review-queue?limit=${limit}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch review queue: ${res.status}`);
   }
@@ -39,7 +48,7 @@ export async function fetchReviewQueue(limit = 50): Promise<ReviewQueueItem[]> {
 }
 
 export async function fetchWatchlists(): Promise<Watchlist[]> {
-  const res = await fetch(`${API_BASE}/api/watchlists`);
+  const res = await apiFetch("/api/watchlists");
   if (!res.ok) {
     throw new Error(`Failed to fetch saved searches: ${res.status}`);
   }
@@ -52,7 +61,7 @@ async function throwApiError(res: Response, fallback: string): Promise<never> {
 }
 
 export async function createWatchlist(name: string, criteria: DiscoveryPreferences): Promise<Watchlist> {
-  const res = await fetch(`${API_BASE}/api/watchlists`, {
+  const res = await apiFetch("/api/watchlists", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, criteria }),
@@ -62,7 +71,7 @@ export async function createWatchlist(name: string, criteria: DiscoveryPreferenc
 }
 
 export async function updateWatchlist(id: number, name: string, criteria: DiscoveryPreferences): Promise<Watchlist> {
-  const res = await fetch(`${API_BASE}/api/watchlists/${id}`, {
+  const res = await apiFetch(`/api/watchlists/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, criteria }),
@@ -72,12 +81,12 @@ export async function updateWatchlist(id: number, name: string, criteria: Discov
 }
 
 export async function deleteWatchlist(id: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/watchlists/${id}`, { method: "DELETE" });
+  const res = await apiFetch(`/api/watchlists/${id}`, { method: "DELETE" });
   if (!res.ok) return throwApiError(res, `Failed to delete saved search: ${res.status}`);
 }
 
 export async function submitHistoryVerification(vin: string, input: HistoryVerificationInput): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/vehicles/${encodeURIComponent(vin)}/history`, {
+  const res = await apiFetch(`/api/vehicles/${encodeURIComponent(vin)}/history`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
