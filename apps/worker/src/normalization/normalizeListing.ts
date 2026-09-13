@@ -17,6 +17,7 @@ interface RawListingFields {
   listing_url: string;
   history_report_url?: string;
   photo_count?: number;
+  primary_image_url?: string;
 }
 
 export function normalizeListing(raw: RawListing): NormalizedListing {
@@ -39,5 +40,6 @@ export function normalizeListing(raw: RawListing): NormalizedListing {
     observedAt: raw.fetchedAt,
     historyReportUrl: fields.history_report_url,
     photoCount: fields.photo_count,
+    primaryImageUrl: fields.primary_image_url,
   };
 }

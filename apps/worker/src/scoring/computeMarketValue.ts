@@ -47,5 +47,7 @@ export async function computeMarketValue(env: Env, vin: string): Promise<void> {
 
   const valueScore = marketPriceAdvantageScore(comparison);
 
-  await env.DB.prepare("UPDATE vehicles SET value_score = ? WHERE vin = ?").bind(valueScore, vin).run();
+  await env.DB.prepare("UPDATE vehicles SET value_score = ?, market_comparison_json = ? WHERE vin = ?")
+    .bind(valueScore, JSON.stringify(comparison), vin)
+    .run();
 }

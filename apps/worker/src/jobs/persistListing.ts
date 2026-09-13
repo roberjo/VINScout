@@ -73,9 +73,16 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
 
   if (existingListing) {
     await env.DB.prepare(
-      "UPDATE listings SET price = ?, mileage = ?, last_seen_at = ?, active = 1, photo_count = ? WHERE id = ?",
+      "UPDATE listings SET price = ?, mileage = ?, last_seen_at = ?, active = 1, photo_count = ?, primary_image_url = ? WHERE id = ?",
     )
-      .bind(listing.price, listing.mileage, listing.observedAt, listing.photoCount ?? null, existingListing.id)
+      .bind(
+        listing.price,
+        listing.mileage,
+        listing.observedAt,
+        listing.photoCount ?? null,
+        listing.primaryImageUrl ?? null,
+        existingListing.id,
+      )
       .run();
 
     if (existingListing.price !== listing.price) {
@@ -88,8 +95,8 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
 
   await env.DB.prepare(
     `INSERT INTO listings
-       (vin, source, dealer_name, dealer_city, dealer_state, price, mileage, listing_url, first_seen_at, last_seen_at, active, photo_count)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+       (vin, source, dealer_name, dealer_city, dealer_state, price, mileage, listing_url, first_seen_at, last_seen_at, active, photo_count, primary_image_url)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
   )
     .bind(
       listing.vin,
@@ -103,6 +110,7 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
       listing.observedAt,
       listing.observedAt,
       listing.photoCount ?? null,
+      listing.primaryImageUrl ?? null,
     )
     .run();
 

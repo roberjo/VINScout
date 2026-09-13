@@ -24,9 +24,27 @@ interface ListingJoinFields {
   listing_dealer_name: string | null;
   listing_dealer_city: string | null;
   listing_dealer_state: string | null;
+  listing_image_url: string | null;
 }
 
-type VehicleWithListingRow = VehicleRow & ListingJoinFields;
+// vehicles.market_comparison_json / score_breakdown_json (migration 0005) —
+// written by computeMarketValue/computeOpportunityScore so the dashboard can
+// explain *why* a vehicle scored the way it did, not just show a number.
+interface ScoreDetailFields {
+  market_comparison_json: string | null;
+  score_breakdown_json: string | null;
+}
+
+type VehicleWithListingRow = VehicleRow & ListingJoinFields & ScoreDetailFields;
+
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}
 
 function vehicleRowWithListingToDomain(row: VehicleWithListingRow) {
   return {
@@ -36,6 +54,9 @@ function vehicleRowWithListingToDomain(row: VehicleWithListingRow) {
     dealerName: row.listing_dealer_name,
     dealerCity: row.listing_dealer_city,
     dealerState: row.listing_dealer_state,
+    imageUrl: row.listing_image_url,
+    marketComparison: safeParseJson(row.market_comparison_json),
+    scoreBreakdown: safeParseJson(row.score_breakdown_json),
   };
 }
 
@@ -48,6 +69,12 @@ const CURRENT_LISTING_CTE = `
     FROM listings
     WHERE active = 1
   )
+`;
+
+const LISTING_JOIN_SELECT = `
+  cl.price AS listing_price, cl.listing_url AS listing_url,
+  cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
+  cl.dealer_state AS listing_dealer_state, cl.primary_image_url AS listing_image_url
 `;
 
 export const vehicles = new Hono<{ Bindings: Env }>();
@@ -86,9 +113,7 @@ vehicles.get("/", async (c) => {
 
   const { results } = await c.env.DB.prepare(
     `${CURRENT_LISTING_CTE}
-     SELECT v.*, cl.price AS listing_price, cl.listing_url AS listing_url,
-            cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
-            cl.dealer_state AS listing_dealer_state
+     SELECT v.*, ${LISTING_JOIN_SELECT}
      FROM vehicles v
      LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
      WHERE ${conditions.join(" AND ")}
@@ -106,9 +131,7 @@ vehicles.get("/:vin", async (c) => {
 
   const row = await c.env.DB.prepare(
     `${CURRENT_LISTING_CTE}
-     SELECT v.*, cl.price AS listing_price, cl.listing_url AS listing_url,
-            cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
-            cl.dealer_state AS listing_dealer_state
+     SELECT v.*, ${LISTING_JOIN_SELECT}
      FROM vehicles v
      LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
      WHERE v.vin = ?`,

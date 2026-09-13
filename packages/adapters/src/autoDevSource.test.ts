@@ -79,4 +79,12 @@ describe("mapAutoDevListingToRaw", () => {
     );
     expect(raw?.raw.photo_count).toBe(18);
   });
+
+  it("passes through the primary image URL when Auto.dev reports one", () => {
+    const raw = mapAutoDevListingToRaw(
+      { ...FULL_ITEM, retailListing: { ...FULL_ITEM.retailListing, primaryImage: "https://cdn.example/photo.jpg" } },
+      FETCHED_AT,
+    );
+    expect(raw?.raw.primary_image_url).toBe("https://cdn.example/photo.jpg");
+  });
 });

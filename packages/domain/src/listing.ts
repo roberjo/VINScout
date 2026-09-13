@@ -36,4 +36,8 @@ export interface NormalizedListing {
   // Photo count, when the source reports it — used as a dealer/listing
   // quality proxy (spec §18) since no source gives us anything richer.
   photoCount?: number;
+
+  // The dealer's own primary listing photo, when the source reports one —
+  // shown in the dashboard so a listing isn't just a wall of numbers.
+  primaryImageUrl?: string;
 }

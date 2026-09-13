@@ -30,6 +30,10 @@ Interpretation: 90-100 exceptional, 80-89 excellent, 70-79 strong, 60-69 fair, <
 
 All of the scoring constants above (weights within each factor, penalty rates, thresholds) are first-pass heuristics, not derived from data — documented as such in each function's own comments. Verified end-to-end locally against real Auto.dev inventory: two real vehicles (a 2020 Honda Pilot, a 2017 Jeep Wrangler) correctly produced `opportunity_score`s of 65.65 and 66.1 and appeared correctly sorted (highest first) in `GET /api/vehicles`.
 
+### Explaining the score, not just showing it
+
+A bare number doesn't tell you anything. `computeOpportunityScore` also persists a labeled breakdown to `vehicles.score_breakdown_json` (migration `0005_score_details.sql`) — each factor's label, raw 0-100 score, weight, and its actual point contribution to the total — and `computeMarketValue` persists the full `MarketComparison` (asking vs. estimated market price, comparable count) to `vehicles.market_comparison_json`. The vehicles API parses both back out (`GET /api/vehicles`, `GET /api/vehicles/:vin`) so the dashboard can render a real "why," not a black box: a per-vehicle detail view shows the full factor table plus a plain-language "asking $X vs. an estimated market price of $Y, based on N comparables" line. The Opportunities list itself gets a color-coded tier badge (spec §18's Exceptional/Excellent/Strong/Fair/Weak bands) and a below/above-market chip on every row, plus each vehicle's actual photo (`retailListing.primaryImage` from Auto.dev, plumbed through the same path as `photoCount` — see `migrations/0005_score_details.sql`'s `listings.primary_image_url`).
+
 ## Value engine (spec §17) — implemented
 
 `packages/scoring/src/marketValue.ts`:
