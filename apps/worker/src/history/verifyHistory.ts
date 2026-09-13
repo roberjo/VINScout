@@ -3,6 +3,7 @@ import { evaluateHistory, type HistoryDecision } from "@vinscout/scoring";
 import type { HistoryVerificationInput } from "@vinscout/validation";
 import type { Env } from "../env";
 import { computeMarketValue } from "../scoring/computeMarketValue";
+import { computeMaintenanceRisk } from "../maintenance/computeMaintenanceRisk";
 
 export interface VerifyHistoryResult {
   decision: HistoryDecision;
@@ -77,8 +78,9 @@ export async function applyHistoryVerification(
       .bind(vin, decision.reasons.join("; "), now)
       .run();
   } else {
-    // Only history-approved vehicles get a value score (spec §2, §18).
+    // Only history-approved vehicles get scored at all (spec §2, §18).
     await computeMarketValue(env, vin);
+    await computeMaintenanceRisk(env, vin);
   }
 
   return { decision };
