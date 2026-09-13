@@ -4,6 +4,7 @@ import { useReviewQueue } from "../hooks/useReviewQueue";
 import { VehicleTable } from "../components/VehicleTable";
 import { ReviewQueue } from "../components/ReviewQueue";
 import { FilterBar } from "../components/FilterBar";
+import { PreferencesPanel } from "../components/PreferencesPanel";
 import type { VehicleFilters } from "../types/vehicle";
 
 function SectionCount({ n }: { n: number }) {
@@ -19,11 +20,31 @@ function SectionCount({ n }: { n: number }) {
 
 export function Dashboard() {
   const [filters, setFilters] = useState<VehicleFilters>({});
+  const [prefsOpen, setPrefsOpen] = useState(false);
   const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(filters);
   const { items: reviewItems, loading: reviewLoading, error: reviewError, removeItem } = useReviewQueue();
 
   return (
     <div className="space-y-6">
+      <section className="card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Search Preferences</h2>
+          <button
+            type="button"
+            onClick={() => setPrefsOpen((v) => !v)}
+            className="rounded px-3 py-1 text-sm font-medium"
+            style={{ border: "1px solid var(--border-strong)", color: "var(--ink-secondary)" }}
+          >
+            {prefsOpen ? "Hide" : "Edit"}
+          </button>
+        </div>
+        {prefsOpen && (
+          <div className="mt-4">
+            <PreferencesPanel />
+          </div>
+        )}
+      </section>
+
       <section className="card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center text-base font-semibold">

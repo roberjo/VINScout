@@ -104,6 +104,11 @@ export class AutoDevInventorySource implements InventorySource {
       if (criteria.priceMin != null || criteria.priceMax != null) {
         params.set("retailListing.price", `${criteria.priceMin ?? 0}-${criteria.priceMax ?? 999999}`);
       }
+      if (criteria.mileageMax != null) {
+        // Verified against the live API: retailListing.miles takes the same
+        // range syntax as retailListing.price.
+        params.set("retailListing.miles", `0-${criteria.mileageMax}`);
+      }
       if (criteria.years?.min != null || criteria.years?.max != null) {
         params.set("vehicle.year", `${criteria.years?.min ?? 1900}-${criteria.years?.max ?? 2100}`);
       }

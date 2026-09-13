@@ -1,11 +1,14 @@
 import { AutoDevInventorySource, FixtureInventorySource, type InventorySource } from "@vinscout/adapters";
 import type { SearchCriteria } from "@vinscout/domain";
+import type { DiscoveryPreferences } from "@vinscout/validation";
 import type { Env } from "../env";
 import { normalizeListing } from "../normalization/normalizeListing";
 import { persistNormalizedListing } from "./persistListing";
 
 // Spec §16 — default search area (LaGrange/Newnan/Carrollton/Peachtree City, GA).
-const DEFAULT_CRITERIA: SearchCriteria = {
+// Fixed regardless of saved preferences — those only narrow price/mileage/
+// year/make/model (see loadDiscoveryPreferences), not the search area.
+const BASE_CRITERIA: SearchCriteria = {
   location: { latitude: 33.0201, longitude: -84.7997, radiusMiles: 50 },
   requireCleanHistory: true,
   requireCleanTitle: true,
@@ -17,6 +20,38 @@ const DEFAULT_CRITERIA: SearchCriteria = {
 const AUTODEV_ZIP = "30240";
 const AUTODEV_DISTANCE_MILES = 50;
 const AUTODEV_MAX_PAGES = 1;
+
+// The user's saved "personal taste" filter (PUT /api/preferences, stored in
+// the `watchlists` table) — applied at discovery time so a vehicle outside
+// it never enters the pipeline, and therefore never reaches manual Carfax
+// review. Falls back to no extra filtering if nothing's been saved yet.
+async function loadDiscoveryPreferences(env: Env): Promise<DiscoveryPreferences> {
+  const row = await env.DB.prepare("SELECT criteria_json FROM watchlists WHERE name = 'default'").first<{
+    criteria_json: string;
+  }>();
+  if (!row) return {};
+
+  try {
+    return JSON.parse(row.criteria_json) as DiscoveryPreferences;
+  } catch {
+    return {};
+  }
+}
+
+function buildCriteria(preferences: DiscoveryPreferences): SearchCriteria {
+  return {
+    ...BASE_CRITERIA,
+    priceMin: preferences.priceMin,
+    priceMax: preferences.priceMax,
+    mileageMax: preferences.mileageMax,
+    years:
+      preferences.yearMin != null || preferences.yearMax != null
+        ? { min: preferences.yearMin, max: preferences.yearMax }
+        : undefined,
+    makes: preferences.makes,
+    models: preferences.models,
+  };
+}
 
 // Spec §12 — Source Priority. Real sources register here as they're built.
 // The fixture source is for local pipeline testing only (see wrangler.toml
@@ -43,9 +78,12 @@ function registeredSources(env: Env): InventorySource[] {
 }
 
 export async function discoverListings(env: Env): Promise<void> {
+  const preferences = await loadDiscoveryPreferences(env);
+  const criteria = buildCriteria(preferences);
+
   for (const source of registeredSources(env)) {
     try {
-      const raw = await source.discover(DEFAULT_CRITERIA);
+      const raw = await source.discover(criteria);
       console.log(`discoverListings: ${source.name} returned ${raw.length} listing(s)`);
 
       for (const rawListing of raw) {

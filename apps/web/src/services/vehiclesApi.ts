@@ -1,6 +1,7 @@
 import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
 import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
 import type { HistoryEvidenceEntry } from "../types/evidence";
+import type { DiscoveryPreferences } from "../types/preferences";
 
 // Empty string resolves to a relative /api path, which only works via the
 // Vite dev proxy (vite.config.ts) or if web+worker ever share a domain.
@@ -35,6 +36,25 @@ export async function fetchReviewQueue(limit = 50): Promise<ReviewQueueItem[]> {
     throw new Error(`Failed to fetch review queue: ${res.status}`);
   }
   return res.json();
+}
+
+export async function fetchDiscoveryPreferences(): Promise<DiscoveryPreferences> {
+  const res = await fetch(`${API_BASE}/api/preferences`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch preferences: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function saveDiscoveryPreferences(prefs: DiscoveryPreferences): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/preferences`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(prefs),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to save preferences: ${res.status}`);
+  }
 }
 
 export async function submitHistoryVerification(vin: string, input: HistoryVerificationInput): Promise<void> {
