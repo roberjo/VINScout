@@ -1684,22 +1684,22 @@ That behavior is intentional.
 
 Build in this order:
 
-1. Repository
-2. D1 schema
-3. Domain models
-4. History gate
-5. Vehicle/listing API
-6. React dashboard
-7. One inventory adapter
-8. VIN deduplication
-9. History provider abstraction
-10. History verification
-11. Market-value engine
-12. Maintenance engine
-13. Opportunity scoring
-14. Second/third inventory adapters
-15. Cron scheduling
-16. Alerts
-17. Price-history analytics
+1. Repository — ✅ Done
+2. D1 schema — ✅ Done (`migrations/0001_initial.sql`, `0002_indexes.sql`, `0003_history.sql`). Schema is written but not yet applied to a real D1 database — see §Cloudflare setup.
+3. Domain models — ✅ Done (`packages/domain`)
+4. History gate — ✅ Done, unit tested (`packages/scoring/src/historyGate.ts`)
+5. Vehicle/listing API — 🟡 Partial. `GET /api/vehicles` and `GET /api/vehicles/:vin` exist (`apps/worker/src/api/vehicles.ts`) and read from D1, but there's no real data to read yet, and no write/ingest endpoints.
+6. React dashboard — 🟡 Partial. Fetches and renders the vehicles list (`apps/web`), but it's a single read-only table — no filters, watchlists, or detail view yet.
+7. One inventory adapter — ⬜ Not started
+8. VIN deduplication — ⬜ Not started
+9. History provider abstraction — ⬜ Not started
+10. History verification — ⬜ Not started
+11. Market-value engine — ⬜ Not started
+12. Maintenance engine — ⬜ Not started
+13. Opportunity scoring — 🟡 Partial. The weighting function (`scoreOpportunity`) is implemented and tested against pre-computed 0-100 sub-scores, but nothing computes those sub-scores from real data yet (depends on steps 11-12).
+14. Second/third inventory adapters — ⬜ Not started
+15. Cron scheduling — 🟡 Partial. `apps/worker/wrangler.toml` defines the Cron Trigger and the Worker's `scheduled()` handler is wired up, but the job it calls (`discoverListings`) is a no-op until an adapter exists (step 7).
+16. Alerts — ⬜ Not started
+17. Price-history analytics — ⬜ Not started
 
-The history gate should be implemented before the scoring engine. This guarantees the architecture cannot accidentally rank an accident vehicle as a superior bargain.The next logical step is to turn this specification into an actual **GitHub repository skeleton** with the D1 migrations, TypeScript domain interfaces, Worker routes, scoring engine, history-gate tests, React dashboard, and GitHub Actions deployment workflow. That would give you a runnable MVP rather than just an architecture document.
+The history gate should be implemented before the scoring engine. This guarantees the architecture cannot accidentally rank an accident vehicle as a superior bargain. That invariant is enforced in code today: `scoreOpportunity` refuses to return a score when the history gate's decision is ineligible.
