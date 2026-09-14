@@ -4,5 +4,5 @@ ENABLE_FIXTURE_SOURCE=true
 # Leave unset to skip the Auto.dev source entirely.
 AUTODEV_API_KEY=
 
-# Must match apps/web/vite.config.ts's LOCAL_DEV_PROXY_SECRET.
+# Must match apps/web/.dev.vars's INTERNAL_PROXY_SECRET.
 INTERNAL_PROXY_SECRET=local-dev-only-not-a-real-secret

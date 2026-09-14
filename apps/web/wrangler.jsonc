@@ -6,12 +6,15 @@
   "observability": {
     "enabled": true
   },
-  "vars": {
-    "BACKEND_URL": "https://vinscout-worker.johnbroberts.workers.dev"
-  },
+  "services": [
+    {
+      "binding": "BACKEND",
+      "service": "vinscout-worker"
+    }
+  ],
   "assets": {
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   }
 }

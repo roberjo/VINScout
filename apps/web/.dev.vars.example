@@ -1,7 +1,7 @@
-# Overrides wrangler.jsonc's BACKEND_URL for local dev, so the proxy in
-# src/worker.ts talks to your local backend (wrangler dev, apps/worker) instead
-# of production.
-BACKEND_URL=http://localhost:8787
+# The BACKEND service binding in wrangler.jsonc auto-connects to apps/worker's
+# local `wrangler dev` session by name ("vinscout-worker") via Wrangler's local
+# dev registry — no URL needed here. Just make sure apps/worker is running
+# locally (npm run dev:worker) alongside this app.
 
 # Must match apps/worker/.dev.vars's INTERNAL_PROXY_SECRET.
 INTERNAL_PROXY_SECRET=local-dev-only-not-a-real-secret

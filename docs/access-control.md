@@ -13,15 +13,17 @@ Every API endpoint originally had zero authentication — any random visitor to 
 
 ## Layer 2: same-origin proxy + shared secret (the actual fix)
 
-`apps/web/src/worker.ts` is a small Worker script (wired in via `wrangler.jsonc`'s `main` + `assets.run_worker_first: ["/api/*"]`) that runs *inside* the already-Access-protected dashboard Worker. Every `/api/*` request from the browser goes to this same hostname — no cross-origin call, no second Access login — and this script forwards it server-side to the real backend (`vinscout-worker.johnbroberts.workers.dev`), attaching a shared secret header (`X-Internal-Proxy-Key`) that only these two Workers know.
+`apps/web/src/worker.ts` is a small Worker script (wired in via `wrangler.jsonc`'s `main` + `assets.run_worker_first: true`) that runs *inside* the already-Access-protected dashboard Worker. Every `/api/*` request from the browser goes to this same hostname — no cross-origin call, no second Access login — and this script forwards it to the real backend (`vinscout-worker`), attaching a shared secret header (`X-Internal-Proxy-Key`) that only these two Workers know.
 
 The backend (`apps/worker/src/index.ts`) requires that exact header on every `/api/*` request and rejects anything else with `401` — regardless of whether the caller went through Access or not. This is what actually closes the original hole: the backend's raw hostname is still technically internet-reachable, but every request without the shared secret gets rejected before it reaches any route handler.
 
 **Net effect:** a browser only ever needs to authenticate once, against the single dashboard hostname. The backend Worker is protected independently of Access, by a secret only the proxy holds — so even if someone finds the raw backend URL, they can't do anything with it.
 
+**The forward hop is a Cloudflare Service Binding (`env.BACKEND`), not a plain `fetch()`.** The first version of this proxy used `fetch()` against the backend's public `*.workers.dev` URL, and it silently failed in production: the backend returned Cloudflare's own stock "There is nothing here yet" 404 page, even though the identical URL with the identical `X-Internal-Proxy-Key` header returned a correct `200` when hit directly (e.g. via `curl`) from outside Cloudflare's network. Cloudflare's edge apparently treats a Worker-to-Worker `fetch()` targeting another Worker's own `*.workers.dev` hostname differently from an external request to that same hostname, and routes it to a "no route configured" page instead of the Worker. A **service binding** (`services: [{ binding: "BACKEND", service: "vinscout-worker" }]` in `wrangler.jsonc`, called as `env.BACKEND.fetch(request)`) sidesteps this entirely — it invokes the target Worker directly, with no DNS/TLS/`*.workers.dev` routing (and no Access) in the path at all, which is also the officially recommended way to do Worker-to-Worker calls on Cloudflare.
+
 ## Local development
 
-Both `.dev.vars` files (gitignored, see `.dev.vars.example` in each app) must have matching `INTERNAL_PROXY_SECRET` values — copy the example files. `apps/web/.dev.vars` also overrides `BACKEND_URL` to `http://localhost:8787` so the local proxy talks to your local `wrangler dev` backend instead of production (without that override, `wrangler.jsonc`'s `vars.BACKEND_URL` — the production URL — is what the `cloudflare()` Vite plugin uses even in local dev, since it runs `apps/web/src/worker.ts` for real inside Vite's dev server).
+Both `.dev.vars` files (gitignored, see `.dev.vars.example` in each app) must have matching `INTERNAL_PROXY_SECRET` values — copy the example files. No backend URL is needed: the `BACKEND` service binding auto-connects to `apps/worker`'s local `wrangler dev` session by name (`vinscout-worker`) via Wrangler's local dev registry, as long as that's running too (`npm run dev:worker`).
 
 ## What's *not* covered
 
