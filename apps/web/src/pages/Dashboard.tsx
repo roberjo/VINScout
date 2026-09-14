@@ -4,8 +4,11 @@ import { useReviewQueue } from "../hooks/useReviewQueue";
 import { VehicleTable } from "../components/VehicleTable";
 import { ReviewQueue } from "../components/ReviewQueue";
 import { FilterBar } from "../components/FilterBar";
+import { Pagination } from "../components/Pagination";
 import { WatchlistManager } from "../components/WatchlistManager";
-import type { VehicleFilters } from "../types/vehicle";
+import type { VehicleFilters, VehicleSort } from "../types/vehicle";
+
+const DEFAULT_SORT: VehicleSort = { sortBy: "opportunityScore", sortDir: "desc" };
 
 function SectionCount({ n }: { n: number }) {
   return (
@@ -20,7 +23,16 @@ function SectionCount({ n }: { n: number }) {
 
 export function Dashboard() {
   const [filters, setFilters] = useState<VehicleFilters>({});
-  const { vehicles, loading: vehiclesLoading, error: vehiclesError } = useVehicles(filters);
+  const [sort, setSort] = useState<VehicleSort>(DEFAULT_SORT);
+  const {
+    vehicles,
+    total,
+    page,
+    pageSize,
+    setPage,
+    loading: vehiclesLoading,
+    error: vehiclesError,
+  } = useVehicles(filters, sort);
   const { items: reviewItems, loading: reviewLoading, error: reviewError, removeItem } = useReviewQueue();
 
   return (
@@ -34,7 +46,7 @@ export function Dashboard() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center text-base font-semibold">
             Opportunities
-            {!vehiclesLoading && !vehiclesError && <SectionCount n={vehicles.length} />}
+            {!vehiclesLoading && !vehiclesError && <SectionCount n={total} />}
           </h2>
         </div>
         <FilterBar filters={filters} onChange={setFilters} />
@@ -42,7 +54,12 @@ export function Dashboard() {
         {vehiclesError && (
           <p className="badge badge-critical">Error: {vehiclesError}</p>
         )}
-        {!vehiclesLoading && !vehiclesError && <VehicleTable vehicles={vehicles} />}
+        {!vehiclesLoading && !vehiclesError && (
+          <>
+            <VehicleTable vehicles={vehicles} sort={sort} onSortChange={setSort} />
+            <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
+          </>
+        )}
       </section>
 
       <section className="card p-5">

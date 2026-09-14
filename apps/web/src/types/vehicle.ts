@@ -29,7 +29,26 @@ export interface VehicleWithListing extends Vehicle {
 
 export interface VehicleFilters {
   make?: string;
+  model?: string;
   priceMin?: number;
   priceMax?: number;
   mileageMax?: number;
+  yearMin?: number;
+  yearMax?: number;
+}
+
+// Whitelisted server-side too (apps/worker/src/api/vehicles.ts's
+// SORTABLE_COLUMNS) — keep this list in sync with that one.
+export type VehicleSortColumn = "opportunityScore" | "price" | "mileage" | "year" | "firstSeenAt";
+
+export interface VehicleSort {
+  sortBy: VehicleSortColumn;
+  sortDir: "asc" | "desc";
+}
+
+export interface PagedVehicles {
+  items: VehicleWithListing[];
+  total: number;
+  limit: number;
+  offset: number;
 }

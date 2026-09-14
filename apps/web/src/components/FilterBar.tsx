@@ -14,7 +14,14 @@ const inputStyle: CSSProperties = {
 
 export function FilterBar({ filters, onChange }: Props) {
   const update = (patch: Partial<VehicleFilters>) => onChange({ ...filters, ...patch });
-  const hasFilters = filters.make || filters.priceMin != null || filters.priceMax != null || filters.mileageMax != null;
+  const hasFilters =
+    filters.make ||
+    filters.model ||
+    filters.priceMin != null ||
+    filters.priceMax != null ||
+    filters.mileageMax != null ||
+    filters.yearMin != null ||
+    filters.yearMax != null;
 
   return (
     <div
@@ -29,6 +36,44 @@ export function FilterBar({ filters, onChange }: Props) {
           onChange={(e) => update({ make: e.target.value || undefined })}
           placeholder="Any"
           className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+        Model
+        <input
+          type="text"
+          value={filters.model ?? ""}
+          onChange={(e) => update({ model: e.target.value || undefined })}
+          placeholder="Any"
+          className="w-28 rounded px-2 py-1 text-sm"
+          style={inputStyle}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+        Min year
+        <input
+          type="number"
+          min={1980}
+          value={filters.yearMin ?? ""}
+          onChange={(e) => update({ yearMin: e.target.value ? Number(e.target.value) : undefined })}
+          placeholder="Any"
+          className="w-24 rounded px-2 py-1 text-sm"
+          style={inputStyle}
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+        Max year
+        <input
+          type="number"
+          min={1980}
+          value={filters.yearMax ?? ""}
+          onChange={(e) => update({ yearMax: e.target.value ? Number(e.target.value) : undefined })}
+          placeholder="Any"
+          className="w-24 rounded px-2 py-1 text-sm"
           style={inputStyle}
         />
       </label>

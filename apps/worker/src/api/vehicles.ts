@@ -79,15 +79,38 @@ const LISTING_JOIN_SELECT = `
 
 export const vehicles = new Hono<{ Bindings: Env }>();
 
+// Whitelisted rather than taking the column name straight off the query
+// string — this goes directly into ORDER BY, which can't be parameterized
+// like a value can, so an unvalidated column name would be a SQL injection
+// vector.
+const SORTABLE_COLUMNS: Record<string, string> = {
+  opportunityScore: "v.opportunity_score",
+  price: "cl.price",
+  mileage: "v.mileage",
+  year: "v.year",
+  firstSeenAt: "v.first_seen_at",
+};
+const DEFAULT_SORT = "opportunityScore";
+
 // Only ACTIVE, history-approved vehicles are eligible for an opportunity
-// score in the first place (see @vinscout/scoring's history gate), so
-// ordering by opportunity_score here never surfaces a rejected vehicle.
+// score in the first place (see @vinscout/scoring's history gate), so no
+// sort/filter/pagination combination here can ever surface a rejected
+// vehicle — that gate is enforced in the WHERE clause, independent of
+// whatever the user chose to sort or filter by.
 vehicles.get("/", async (c) => {
-  const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
+  const limit = Math.min(Number(c.req.query("limit") ?? 25) || 25, 100);
+  const offset = Math.max(Number(c.req.query("offset") ?? 0) || 0, 0);
   const make = c.req.query("make");
+  const model = c.req.query("model");
   const priceMin = c.req.query("priceMin");
   const priceMax = c.req.query("priceMax");
   const mileageMax = c.req.query("mileageMax");
+  const yearMin = c.req.query("yearMin");
+  const yearMax = c.req.query("yearMax");
+
+  const sortByParam = c.req.query("sortBy") ?? DEFAULT_SORT;
+  const sortColumn = SORTABLE_COLUMNS[sortByParam] ?? SORTABLE_COLUMNS[DEFAULT_SORT];
+  const sortDir = c.req.query("sortDir") === "asc" ? "ASC" : "DESC";
 
   const conditions = ["v.status = 'ACTIVE'", "v.opportunity_score IS NOT NULL"];
   const params: (string | number)[] = [];
@@ -95,6 +118,10 @@ vehicles.get("/", async (c) => {
   if (make) {
     conditions.push("v.make = ?");
     params.push(make);
+  }
+  if (model) {
+    conditions.push("v.model = ?");
+    params.push(model);
   }
   if (mileageMax) {
     conditions.push("v.mileage <= ?");
@@ -108,22 +135,46 @@ vehicles.get("/", async (c) => {
     conditions.push("cl.price <= ?");
     params.push(Number(priceMax));
   }
+  if (yearMin) {
+    conditions.push("v.year >= ?");
+    params.push(Number(yearMin));
+  }
+  if (yearMax) {
+    conditions.push("v.year <= ?");
+    params.push(Number(yearMax));
+  }
 
-  params.push(limit);
+  const whereClause = conditions.join(" AND ");
 
-  const { results } = await c.env.DB.prepare(
-    `${CURRENT_LISTING_CTE}
-     SELECT v.*, ${LISTING_JOIN_SELECT}
-     FROM vehicles v
-     LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
-     WHERE ${conditions.join(" AND ")}
-     ORDER BY v.opportunity_score DESC
-     LIMIT ?`,
-  )
-    .bind(...params)
-    .all<VehicleWithListingRow>();
+  const [{ results }, countRow] = await Promise.all([
+    c.env.DB.prepare(
+      `${CURRENT_LISTING_CTE}
+       SELECT v.*, ${LISTING_JOIN_SELECT}
+       FROM vehicles v
+       LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
+       WHERE ${whereClause}
+       ORDER BY ${sortColumn} ${sortDir} NULLS LAST, v.vin
+       LIMIT ? OFFSET ?`,
+    )
+      .bind(...params, limit, offset)
+      .all<VehicleWithListingRow>(),
+    c.env.DB.prepare(
+      `${CURRENT_LISTING_CTE}
+       SELECT COUNT(*) AS total
+       FROM vehicles v
+       LEFT JOIN current_listing cl ON cl.vin = v.vin AND cl.rn = 1
+       WHERE ${whereClause}`,
+    )
+      .bind(...params)
+      .first<{ total: number }>(),
+  ]);
 
-  return c.json(results.map(vehicleRowWithListingToDomain));
+  return c.json({
+    items: results.map(vehicleRowWithListingToDomain),
+    total: countRow?.total ?? 0,
+    limit,
+    offset,
+  });
 });
 
 vehicles.get("/:vin", async (c) => {

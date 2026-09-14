@@ -1,5 +1,5 @@
 import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
-import type { VehicleFilters, VehicleWithListing } from "../types/vehicle";
+import type { PagedVehicles, VehicleFilters, VehicleSort } from "../types/vehicle";
 import type { HistoryEvidenceEntry } from "../types/evidence";
 import type { DiscoveryPreferences, Watchlist } from "../types/preferences";
 
@@ -12,12 +12,27 @@ function apiFetch(path: string, init?: RequestInit): Promise<Response> {
   return fetch(path, init);
 }
 
-export async function fetchVehicles(filters: VehicleFilters = {}, limit = 50): Promise<VehicleWithListing[]> {
-  const params = new URLSearchParams({ limit: String(limit) });
+const DEFAULT_PAGE_SIZE = 25;
+
+export async function fetchVehicles(
+  filters: VehicleFilters = {},
+  sort: VehicleSort = { sortBy: "opportunityScore", sortDir: "desc" },
+  page = 0,
+  limit = DEFAULT_PAGE_SIZE,
+): Promise<PagedVehicles> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(page * limit),
+    sortBy: sort.sortBy,
+    sortDir: sort.sortDir,
+  });
   if (filters.make) params.set("make", filters.make);
+  if (filters.model) params.set("model", filters.model);
   if (filters.priceMin != null) params.set("priceMin", String(filters.priceMin));
   if (filters.priceMax != null) params.set("priceMax", String(filters.priceMax));
   if (filters.mileageMax != null) params.set("mileageMax", String(filters.mileageMax));
+  if (filters.yearMin != null) params.set("yearMin", String(filters.yearMin));
+  if (filters.yearMax != null) params.set("yearMax", String(filters.yearMax));
 
   const res = await apiFetch(`/api/vehicles?${params.toString()}`);
   if (!res.ok) {

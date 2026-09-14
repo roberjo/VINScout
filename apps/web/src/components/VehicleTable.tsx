@@ -1,5 +1,5 @@
 import { Fragment, useState } from "react";
-import type { VehicleWithListing } from "../types/vehicle";
+import type { VehicleSort, VehicleSortColumn, VehicleWithListing } from "../types/vehicle";
 import { VehicleDetail } from "./VehicleDetail";
 import { scoreTier } from "../utils/scoreTier";
 
@@ -22,7 +22,63 @@ function MarketPositionChip({ percent }: { percent: number }) {
   );
 }
 
-export function VehicleTable({ vehicles }: { vehicles: VehicleWithListing[] }) {
+// Each column's sensible starting direction on first click — e.g. price and
+// mileage start ascending (cheapest/lowest first), while a score or year
+// starts descending (best/newest first). Clicking the already-active column
+// again just flips it.
+const DEFAULT_SORT_DIR: Record<VehicleSortColumn, "asc" | "desc"> = {
+  opportunityScore: "desc",
+  price: "asc",
+  mileage: "asc",
+  year: "desc",
+  firstSeenAt: "desc",
+};
+
+function nextSort(current: VehicleSort, column: VehicleSortColumn): VehicleSort {
+  if (current.sortBy === column) {
+    return { sortBy: column, sortDir: current.sortDir === "asc" ? "desc" : "asc" };
+  }
+  return { sortBy: column, sortDir: DEFAULT_SORT_DIR[column] };
+}
+
+function SortableHeader({
+  label,
+  column,
+  sort,
+  onSortChange,
+}: {
+  label: string;
+  column: VehicleSortColumn;
+  sort: VehicleSort;
+  onSortChange: (sort: VehicleSort) => void;
+}) {
+  const active = sort.sortBy === column;
+  return (
+    <th className="py-2 pr-4 font-semibold">
+      <button
+        type="button"
+        onClick={() => onSortChange(nextSort(sort, column))}
+        className="flex items-center gap-1 uppercase tracking-wide"
+        style={{ color: active ? "var(--ink-primary)" : "inherit" }}
+      >
+        {label}
+        <span aria-hidden="true" style={{ visibility: active ? "visible" : "hidden" }}>
+          {sort.sortDir === "asc" ? "▲" : "▼"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
+export function VehicleTable({
+  vehicles,
+  sort,
+  onSortChange,
+}: {
+  vehicles: VehicleWithListing[];
+  sort: VehicleSort;
+  onSortChange: (sort: VehicleSort) => void;
+}) {
   const [expandedVin, setExpandedVin] = useState<string | null>(null);
 
   if (vehicles.length === 0) {
@@ -39,10 +95,10 @@ export function VehicleTable({ vehicles }: { vehicles: VehicleWithListing[] }) {
       <thead>
         <tr style={{ color: "var(--ink-muted)" }} className="text-xs font-semibold uppercase tracking-wide">
           <th className="py-2 pr-4 font-semibold"></th>
-          <th className="py-2 pr-4 font-semibold">Vehicle</th>
-          <th className="py-2 pr-4 font-semibold">Price</th>
-          <th className="py-2 pr-4 font-semibold">Mileage</th>
-          <th className="py-2 pr-4 font-semibold">Opportunity</th>
+          <SortableHeader label="Vehicle" column="year" sort={sort} onSortChange={onSortChange} />
+          <SortableHeader label="Price" column="price" sort={sort} onSortChange={onSortChange} />
+          <SortableHeader label="Mileage" column="mileage" sort={sort} onSortChange={onSortChange} />
+          <SortableHeader label="Opportunity" column="opportunityScore" sort={sort} onSortChange={onSortChange} />
         </tr>
       </thead>
       <tbody>
