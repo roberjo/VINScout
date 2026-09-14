@@ -29,6 +29,17 @@ function HighlightBadges({ highlights }: { highlights: ReviewHighlight[] }) {
   );
 }
 
+// Carfax/AutoCheck both set X-Frame-Options/CSP on their report pages
+// specifically to prevent embedding (same reason we never scrape their
+// content directly — see docs/history-gate.md), so an <iframe> just renders
+// blank; there's no workaround from our side. A sized popup window is the
+// closest thing that still keeps the dashboard on screen instead of a full
+// tab-switch — position it alongside the dashboard rather than losing the
+// vehicle list behind it.
+function openHistoryReport(url: string): void {
+  window.open(url, "vinscout-history-report", "width=960,height=1000,noopener,noreferrer");
+}
+
 export function ReviewQueue({
   items,
   onVerified,
@@ -82,15 +93,14 @@ export function ReviewQueue({
 
               <div className="flex items-center gap-3">
                 {item.historyReportLinks.map((link) => (
-                  <a
+                  <button
                     key={link.source_url}
-                    href={link.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    type="button"
+                    onClick={() => openHistoryReport(link.source_url)}
                     className="text-sm underline"
                   >
                     {PROVIDER_LABEL[link.provider] ?? link.provider} report ↗
-                  </a>
+                  </button>
                 ))}
 
                 <button
