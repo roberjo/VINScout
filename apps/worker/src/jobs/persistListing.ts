@@ -2,6 +2,9 @@ import { HistoryStatus, type NormalizedListing } from "@vinscout/domain";
 import { evaluateHistory } from "@vinscout/scoring";
 import type { Env } from "../env";
 import { detectHistoryProvider } from "../history/detectHistoryProvider";
+import { computeMarketValue } from "../scoring/computeMarketValue";
+import { computeAndStoreReliabilityScore } from "../scoring/computeReliabilitySignal";
+import { computeMaintenanceRisk } from "../maintenance/computeMaintenanceRisk";
 
 // Spec §13 — VIN Deduplication. One `vehicles` row per VIN regardless of how
 // many sources list it; each source/listing gets its own `listings` row.
@@ -90,6 +93,7 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
         .bind(listing.vin, listing.price, listing.observedAt, listing.source)
         .run();
     }
+    await computePreviewSignals(env, listing.vin);
     return;
   }
 
@@ -117,6 +121,21 @@ export async function persistNormalizedListing(env: Env, listing: NormalizedList
   await env.DB.prepare("INSERT INTO price_history (vin, price, observed_at, source) VALUES (?, ?, ?, ?)")
     .bind(listing.vin, listing.price, listing.observedAt, listing.source)
     .run();
+
+  await computePreviewSignals(env, listing.vin);
+}
+
+// Market price advantage, maintenance exposure, and reliability are all
+// independent of history status — computing and storing them here (rather
+// than only after history verification, like the gated opportunity score)
+// is what lets the manual review queue show "why is this worth reviewing"
+// highlights before a human ever opens a Carfax report. Cheap and
+// idempotent enough to just re-run on every discovery pass, so comparables
+// and recall data stay fresh over time.
+async function computePreviewSignals(env: Env, vin: string): Promise<void> {
+  await computeMarketValue(env, vin);
+  await computeMaintenanceRisk(env, vin);
+  await computeAndStoreReliabilityScore(env, vin);
 }
 
 // Surfaces a Carfax/AutoCheck link the dealer published on their own listing

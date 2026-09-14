@@ -7,3 +7,4 @@ export * from "./mileageScore";
 export * from "./trimScore";
 export * from "./dealerQualityScore";
 export * from "./reliabilityScore";
+export * from "./reviewHighlights";

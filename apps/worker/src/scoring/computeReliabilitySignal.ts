@@ -1,4 +1,5 @@
 import { reliabilityScoreFromRecallCount } from "@vinscout/scoring";
+import type { Env } from "../env";
 
 const NHTSA_RECALLS_URL = "https://api.nhtsa.gov/recalls/recallsByVehicle";
 
@@ -24,4 +25,27 @@ export async function computeReliabilityScore(
     console.error("computeReliabilityScore: NHTSA request failed", err);
     return 50;
   }
+}
+
+interface TargetRow {
+  make: string;
+  model: string;
+  year: number;
+}
+
+// Persists the reliability sub-score to vehicles.reliability_score at
+// discovery time, independent of history status — this is what lets the
+// manual review queue show a "clean/notable recall history" highlight
+// before a vehicle is ever eligible for the gated opportunity score (which
+// recomputes reliability again itself once a vehicle passes history — see
+// computeOpportunityScore.ts).
+export async function computeAndStoreReliabilityScore(env: Env, vin: string): Promise<void> {
+  const target = await env.DB.prepare("SELECT make, model, year FROM vehicles WHERE vin = ?")
+    .bind(vin)
+    .first<TargetRow>();
+  if (!target) return;
+
+  const score = await computeReliabilityScore(target.make, target.model, target.year);
+
+  await env.DB.prepare("UPDATE vehicles SET reliability_score = ? WHERE vin = ?").bind(score, vin).run();
 }

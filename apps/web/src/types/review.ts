@@ -1,9 +1,15 @@
 import type { Vehicle } from "@vinscout/domain";
+import type { MarketComparison } from "./vehicle";
 
 export interface HistoryReportLink {
   provider: string;
   source_url: string;
   retrieved_at: string;
+}
+
+export interface ReviewHighlight {
+  label: string;
+  tone: "good" | "warning";
 }
 
 export interface ReviewQueueItem extends Vehicle {
@@ -14,6 +20,8 @@ export interface ReviewQueueItem extends Vehicle {
   dealerName: string | null;
   dealerCity: string | null;
   dealerState: string | null;
+  marketComparison: MarketComparison | null;
+  highlights: ReviewHighlight[];
 }
 
 export interface HistoryVerificationInput {

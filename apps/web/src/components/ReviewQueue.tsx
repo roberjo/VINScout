@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
+import type { HistoryVerificationInput, ReviewHighlight, ReviewQueueItem } from "../types/review";
 import { submitHistoryVerification } from "../services/vehiclesApi";
 import { HistoryVerificationForm } from "./HistoryVerificationForm";
 
@@ -10,6 +10,24 @@ const PROVIDER_LABEL: Record<string, string> = {
   AUTOCHECK: "AutoCheck",
   OTHER: "History report",
 };
+
+// Pre-history-review signals (price/mileage/trim/reliability/maintenance) —
+// deliberately never an overall score, since spec §2 says an UNKNOWN-history
+// vehicle must never look vetted. These just answer "why might this be
+// worth my time to review."
+function HighlightBadges({ highlights }: { highlights: ReviewHighlight[] }) {
+  if (highlights.length === 0) return null;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {highlights.map((h) => (
+        <span key={h.label} className={`badge ${h.tone === "good" ? "badge-good" : "badge-warning"}`}>
+          {h.label}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 export function ReviewQueue({
   items,
@@ -59,6 +77,7 @@ export function ReviewQueue({
                   {item.price != null ? currency.format(item.price) : "—"} · {item.mileage.toLocaleString()} mi
                   {item.dealerName ? ` · ${item.dealerName}` : ""}
                 </div>
+                <HighlightBadges highlights={item.highlights} />
               </div>
 
               <div className="flex items-center gap-3">

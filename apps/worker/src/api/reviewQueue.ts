@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import type { MarketComparison } from "@vinscout/domain";
+import { computeReviewHighlights, mileageScore, trimScore } from "@vinscout/scoring";
 import type { Env } from "../env";
 import { vehicleRowToDomain, type VehicleRow } from "../normalization/vehicleRow";
 
@@ -8,6 +10,23 @@ interface ReportLinkRow {
   provider: string;
   source_url: string;
   retrieved_at: string;
+}
+
+// Not on VehicleRow (see normalization/vehicleRow.ts) — these two are
+// preview-only fields the review queue needs but the rest of the app
+// doesn't, so they're kept local rather than added to the shared row shape.
+type VehicleRowWithPreviewFields = VehicleRow & {
+  market_comparison_json: string | null;
+  reliability_score: number | null;
+};
+
+function safeParseJson<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
 }
 
 interface ListingRow {
@@ -29,7 +48,9 @@ reviewQueue.get("/", async (c) => {
     "SELECT * FROM vehicles WHERE status = 'REJECTED' ORDER BY first_seen_at DESC LIMIT ?",
   )
     .bind(limit)
-    .all<VehicleRow>();
+    .all<VehicleRowWithPreviewFields>();
+
+  const currentYear = new Date().getFullYear();
 
   const vehicles = await Promise.all(
     vehicleRows.map(async (row) => {
@@ -48,6 +69,15 @@ reviewQueue.get("/", async (c) => {
           .first<ListingRow>(),
       ]);
 
+      const marketComparison = safeParseJson<MarketComparison>(row.market_comparison_json);
+      const highlights = computeReviewHighlights({
+        marketComparison,
+        mileageScoreValue: mileageScore(row.mileage, row.year, currentYear),
+        trimScoreValue: trimScore(row.trim),
+        reliabilityScoreValue: row.reliability_score,
+        maintenanceScoreValue: row.maintenance_score,
+      });
+
       return {
         ...vehicleRowToDomain(row),
         historyReportLinks: links,
@@ -57,6 +87,8 @@ reviewQueue.get("/", async (c) => {
         dealerName: listing?.dealer_name ?? null,
         dealerCity: listing?.dealer_city ?? null,
         dealerState: listing?.dealer_state ?? null,
+        marketComparison,
+        highlights,
       };
     }),
   );
