@@ -15,7 +15,7 @@
     "@vinscout/scoring": "*",
     "@vinscout/adapters": "*",
     "@vinscout/validation": "*",
-    "hono": "^4.13.7"
+    "hono": "^4.13.13"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260911.1",
