@@ -1,9 +1,10 @@
 name: Test
 
+# Pushes to main run these checks via deploy.yml, which gates the deploy
+# on them; this workflow runs them directly only for pull requests.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_call:
 
 jobs:
   test:

@@ -22,7 +22,7 @@ Chosen to run entirely on free tiers at hobby scale:
 - **Scheduling**: Cloudflare Cron Triggers — runs every 6 hours, pulling real inventory
 - **Inventory data**: [Auto.dev](https://www.auto.dev)'s Vehicle Listings API (free tier, 1,000 calls/month, no card required)
 - **Reliability data**: NHTSA's free public Recalls API (no key needed)
-- **CI/CD**: GitHub Actions (`.github/workflows/deploy.yml` needs `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo secrets to run — deploys so far have been manual via `wrangler`)
+- **CI/CD**: GitHub Actions — pull requests run lint/build/test; pushes to `main` run the same checks, then apply D1 migrations and deploy the Worker and dashboard (needs `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo secrets)
 
 > Note: Cloudflare has folded classic "Pages" into the unified Workers platform (static assets + Workers in one deploy), which is what `apps/web`'s `wrangler.jsonc` uses. Functionally this is the same free-tier static hosting the spec called for.
 
@@ -90,7 +90,7 @@ npm test
 
 ### Deploying
 
-Both apps deploy independently via Wrangler (manual for now; GitHub Actions automation is scaffolded but not yet wired to secrets):
+Pushing to `main` deploys automatically via `.github/workflows/deploy.yml`: checks pass → D1 migrations apply → `apps/worker` deploys → `apps/web` deploys (it service-binds to the worker, so order matters). Migrations run before the new Worker ships, so keep them additive. To deploy manually instead:
 
 ```bash
 npm run deploy --workspace=@vinscout/worker   # apps/worker/wrangler.toml
