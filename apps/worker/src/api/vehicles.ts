@@ -3,6 +3,8 @@ import { historyVerificationSchema } from "@vinscout/validation";
 import type { Env } from "../env";
 import { vehicleRowToDomain, type VehicleRow } from "../normalization/vehicleRow";
 import { applyHistoryVerification } from "../history/verifyHistory";
+import { CURRENT_LISTING_CTE, LISTING_JOIN_SELECT, type ListingJoinFields } from "../db/currentListing";
+import { fetchVehicleFacets } from "../db/vehicleFacets";
 
 interface HistoryEvidenceRow {
   id: number;
@@ -13,18 +15,6 @@ interface HistoryEvidenceRow {
   description: string | null;
   source_url: string | null;
   retrieved_at: string;
-}
-
-// The vehicle's most recently seen active listing, joined in for display —
-// a vehicle can in principle have more than one (multiple sources), but we
-// only ever show the freshest one.
-interface ListingJoinFields {
-  listing_price: number | null;
-  listing_url: string | null;
-  listing_dealer_name: string | null;
-  listing_dealer_city: string | null;
-  listing_dealer_state: string | null;
-  listing_image_url: string | null;
 }
 
 // vehicles.market_comparison_json / score_breakdown_json (migration 0005) —
@@ -60,23 +50,6 @@ function vehicleRowWithListingToDomain(row: VehicleWithListingRow) {
   };
 }
 
-// Picks each vehicle's single freshest active listing (ROW_NUMBER, not a
-// plain JOIN) so a vehicle with more than one active listing doesn't fan out
-// into duplicate rows.
-const CURRENT_LISTING_CTE = `
-  WITH current_listing AS (
-    SELECT *, ROW_NUMBER() OVER (PARTITION BY vin ORDER BY last_seen_at DESC) AS rn
-    FROM listings
-    WHERE active = 1
-  )
-`;
-
-const LISTING_JOIN_SELECT = `
-  cl.price AS listing_price, cl.listing_url AS listing_url,
-  cl.dealer_name AS listing_dealer_name, cl.dealer_city AS listing_dealer_city,
-  cl.dealer_state AS listing_dealer_state, cl.primary_image_url AS listing_image_url
-`;
-
 export const vehicles = new Hono<{ Bindings: Env }>();
 
 // Whitelisted rather than taking the column name straight off the query
@@ -93,8 +66,20 @@ const SORTABLE_COLUMNS: Record<string, string> = {
 const DEFAULT_SORT = "opportunityScore";
 
 // Only ACTIVE, history-approved vehicles are eligible for an opportunity
-// score in the first place (see @vinscout/scoring's history gate), so no
-// sort/filter/pagination combination here can ever surface a rejected
+// score in the first place (see @vinscout/scoring's history gate).
+const BASE_CONDITION = "v.status = 'ACTIVE' AND v.opportunity_score IS NOT NULL";
+
+// Make/model dropdown options for the filter bar — scoped to the same base
+// condition as the listing query below (never offers a make/model with zero
+// results here), but deliberately ignores the *other* filters currently
+// selected, so picking a make never makes every other make disappear from
+// its own dropdown.
+vehicles.get("/facets", async (c) => {
+  const facets = await fetchVehicleFacets(c.env, BASE_CONDITION, []);
+  return c.json(facets);
+});
+
+// No sort/filter/pagination combination here can ever surface a rejected
 // vehicle — that gate is enforced in the WHERE clause, independent of
 // whatever the user chose to sort or filter by.
 vehicles.get("/", async (c) => {
@@ -112,7 +97,7 @@ vehicles.get("/", async (c) => {
   const sortColumn = SORTABLE_COLUMNS[sortByParam] ?? SORTABLE_COLUMNS[DEFAULT_SORT];
   const sortDir = c.req.query("sortDir") === "asc" ? "ASC" : "DESC";
 
-  const conditions = ["v.status = 'ACTIVE'", "v.opportunity_score IS NOT NULL"];
+  const conditions = [BASE_CONDITION];
   const params: (string | number)[] = [];
 
   if (make) {

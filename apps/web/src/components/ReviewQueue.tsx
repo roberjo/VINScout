@@ -1,7 +1,8 @@
-import { useState } from "react";
-import type { HistoryVerificationInput, ReviewHighlight, ReviewQueueItem } from "../types/review";
+import { Fragment, useState } from "react";
+import type { HistoryVerificationInput, ReviewHighlight, ReviewQueueItem, ReviewSort } from "../types/review";
 import { submitHistoryVerification } from "../services/vehiclesApi";
 import { HistoryVerificationForm } from "./HistoryVerificationForm";
+import { SortableHeader } from "./SortableHeader";
 
 const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 
@@ -19,12 +20,37 @@ function HighlightBadges({ highlights }: { highlights: ReviewHighlight[] }) {
   if (highlights.length === 0) return null;
 
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1.5">
+    <div className="mt-1 flex flex-wrap gap-1.5">
       {highlights.map((h) => (
         <span key={h.label} className={`badge ${h.tone === "good" ? "badge-good" : "badge-warning"}`}>
           {h.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+// Wraps its child in a link to the original listing when one exists — used
+// for both the photo and the title, so either one takes you to the source.
+function MaybeListingLink({ url, children }: { url: string | null; children: React.ReactNode }) {
+  if (!url) return <>{children}</>;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  );
+}
+
+function VehiclePhoto({ imageUrl }: { imageUrl: string | null }) {
+  if (imageUrl) {
+    return <img src={imageUrl} alt="" className="h-12 w-16 rounded object-cover" />;
+  }
+  return (
+    <div
+      className="flex h-12 w-16 items-center justify-center rounded text-xs"
+      style={{ background: "var(--border)", color: "var(--ink-muted)" }}
+    >
+      No photo
     </div>
   );
 }
@@ -42,10 +68,14 @@ function openHistoryReport(url: string): void {
 
 export function ReviewQueue({
   items,
+  sort,
+  onSortChange,
   onVerified,
 }: {
   items: ReviewQueueItem[];
-  onVerified: (vin: string) => void;
+  sort: ReviewSort;
+  onSortChange: (sort: ReviewSort) => void;
+  onVerified: () => void;
 }) {
   const [expandedVin, setExpandedVin] = useState<string | null>(null);
 
@@ -56,70 +86,85 @@ export function ReviewQueue({
   const handleSubmit = async (vin: string, input: HistoryVerificationInput) => {
     await submitHistoryVerification(vin, input);
     setExpandedVin(null);
-    onVerified(vin);
+    onVerified();
   };
 
   return (
-    <ul className="space-y-3">
-      {items.map((item) => (
-        <li
-          key={item.vin}
-          className="flex gap-3 rounded-lg p-3"
-          style={{ border: "1px solid var(--border-strong)" }}
-        >
-          {item.imageUrl ? (
-            <img src={item.imageUrl} alt="" className="h-16 w-24 shrink-0 rounded object-cover" />
-          ) : (
-            <div
-              className="flex h-16 w-24 shrink-0 items-center justify-center rounded text-xs"
-              style={{ background: "var(--border)", color: "var(--ink-muted)" }}
-            >
-              No photo
-            </div>
-          )}
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div className="font-medium">
-                  {item.year} {item.make} {item.model} {item.trim ?? ""}
-                </div>
-                <div className="text-sm" style={{ color: "var(--ink-secondary)" }}>
-                  {item.price != null ? currency.format(item.price) : "—"} · {item.mileage.toLocaleString()} mi
-                  {item.dealerName ? ` · ${item.dealerName}` : ""}
-                </div>
+    <table className="w-full text-left text-sm">
+      <thead>
+        <tr style={{ color: "var(--ink-muted)" }} className="text-xs font-semibold uppercase tracking-wide">
+          <th className="py-2 pr-4 font-semibold"></th>
+          <SortableHeader label="Vehicle" column="firstSeenAt" sort={sort} onSortChange={onSortChange} defaultDir="desc" />
+          <SortableHeader label="Price" column="price" sort={sort} onSortChange={onSortChange} defaultDir="asc" />
+          <SortableHeader label="Mileage" column="mileage" sort={sort} onSortChange={onSortChange} defaultDir="asc" />
+          <th className="py-2 pr-4 font-semibold">Highlights</th>
+          <th className="py-2 pr-4 font-semibold">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <Fragment key={item.vin}>
+            <tr style={{ borderTop: "1px solid var(--border)" }}>
+              <td className="py-2 pr-4">
+                <MaybeListingLink url={item.listingUrl}>
+                  <VehiclePhoto imageUrl={item.imageUrl} />
+                </MaybeListingLink>
+              </td>
+              <td className="py-2 pr-4 font-medium">
+                <MaybeListingLink url={item.listingUrl}>
+                  <span className={item.listingUrl ? "hover:underline" : undefined}>
+                    {item.year} {item.make} {item.model} {item.trim ?? ""}
+                  </span>
+                </MaybeListingLink>
+                {item.dealerName && (
+                  <div className="text-xs font-normal" style={{ color: "var(--ink-muted)" }}>
+                    {item.dealerName}
+                  </div>
+                )}
+              </td>
+              <td className="py-2 pr-4">{item.price != null ? currency.format(item.price) : "—"}</td>
+              <td className="py-2 pr-4" style={{ color: "var(--ink-secondary)" }}>
+                {item.mileage.toLocaleString()} mi
+              </td>
+              <td className="py-2 pr-4">
                 <HighlightBadges highlights={item.highlights} />
-              </div>
+              </td>
+              <td className="py-2 pr-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  {item.historyReportLinks.map((link) => (
+                    <button
+                      key={link.source_url}
+                      type="button"
+                      onClick={() => openHistoryReport(link.source_url)}
+                      className="text-sm underline"
+                    >
+                      {PROVIDER_LABEL[link.provider] ?? link.provider} report ↗
+                    </button>
+                  ))}
 
-              <div className="flex items-center gap-3">
-                {item.historyReportLinks.map((link) => (
                   <button
-                    key={link.source_url}
                     type="button"
-                    onClick={() => openHistoryReport(link.source_url)}
-                    className="text-sm underline"
+                    onClick={() => setExpandedVin(expandedVin === item.vin ? null : item.vin)}
+                    className="rounded px-3 py-1 text-sm font-medium"
+                    style={{ border: "1px solid var(--border-strong)", color: "var(--ink-secondary)" }}
                   >
-                    {PROVIDER_LABEL[link.provider] ?? link.provider} report ↗
+                    {expandedVin === item.vin ? "Cancel" : "Review"}
                   </button>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={() => setExpandedVin(expandedVin === item.vin ? null : item.vin)}
-                  className="rounded px-3 py-1 text-sm font-medium"
-                  style={{ border: "1px solid var(--border-strong)", color: "var(--ink-secondary)" }}
-                >
-                  {expandedVin === item.vin ? "Cancel" : "Review"}
-                </button>
-              </div>
-            </div>
-
+                </div>
+              </td>
+            </tr>
             {expandedVin === item.vin && (
-              <HistoryVerificationForm onSubmit={(input) => handleSubmit(item.vin, input)} />
+              <tr>
+                <td colSpan={6} className="p-0">
+                  <div className="px-3 pb-3">
+                    <HistoryVerificationForm onSubmit={(input) => handleSubmit(item.vin, input)} />
+                  </div>
+                </td>
+              </tr>
             )}
-          </div>
-        </li>
-      ))}
-    </ul>
+          </Fragment>
+        ))}
+      </tbody>
+    </table>
   );
 }

@@ -4,6 +4,8 @@ export interface SearchCriteria {
     latitude: number;
     longitude: number;
     radiusMiles: number;
+    /** Auto.dev filters by ZIP, not lat/lon (see AutoDevInventorySource) — set to search around a specific ZIP instead of the app-wide default. */
+    zip?: string;
   };
 
   priceMin?: number;

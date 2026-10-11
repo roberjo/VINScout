@@ -131,6 +131,35 @@ export function WatchlistForm({ initialName = "", initialCriteria = {}, submitLa
         </label>
 
         <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+          ZIP code
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="\d{5}"
+            maxLength={5}
+            value={criteria.zip ?? ""}
+            onChange={(e) => update({ zip: e.target.value.replace(/\D/g, "") || undefined })}
+            placeholder="Default area"
+            className="rounded px-2 py-1 text-sm"
+            style={inputStyle}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
+          Search radius (mi)
+          <input
+            type="number"
+            min={1}
+            max={500}
+            value={criteria.radiusMiles ?? ""}
+            onChange={(e) => update({ radiusMiles: e.target.value ? Number(e.target.value) : undefined })}
+            placeholder="Default (50)"
+            className="rounded px-2 py-1 text-sm"
+            style={inputStyle}
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
           Year range
           <div className="flex gap-1">
             <input

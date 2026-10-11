@@ -93,10 +93,16 @@ export class AutoDevInventorySource implements InventorySource {
     const results: RawListing[] = [];
     const maxPages = this.config.maxPages ?? 1;
 
+    // A saved search's own zip/radius (SearchCriteria.location) takes
+    // priority over this source's configured default, so each watchlist can
+    // search its own area with a single shared adapter instance.
+    const zip = criteria.location.zip ?? this.config.zip;
+    const distance = criteria.location.radiusMiles ?? this.config.distanceMiles ?? 50;
+
     for (let page = 1; page <= maxPages; page++) {
       const params = new URLSearchParams({
-        zip: this.config.zip,
-        distance: String(this.config.distanceMiles ?? 50),
+        zip,
+        distance: String(distance),
         page: String(page),
         limit: String(FREE_PLAN_PAGE_LIMIT),
       });

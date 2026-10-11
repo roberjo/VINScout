@@ -12,6 +12,7 @@ interface UseVehiclesResult {
   setPage: (page: number) => void;
   loading: boolean;
   error: string | null;
+  refetch: () => void;
 }
 
 // Resets to page 0 whenever filters or sort change — a stale page number
@@ -23,6 +24,7 @@ export function useVehicles(filters: VehicleFilters, sort: VehicleSort): UseVehi
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     setPage(0);
@@ -31,6 +33,7 @@ export function useVehicles(filters: VehicleFilters, sort: VehicleSort): UseVehi
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    setError(null);
 
     fetchVehicles(filters, sort, page, PAGE_SIZE)
       .then((data) => {
@@ -59,7 +62,10 @@ export function useVehicles(filters: VehicleFilters, sort: VehicleSort): UseVehi
     sort.sortBy,
     sort.sortDir,
     page,
+    reloadToken,
   ]);
 
-  return { vehicles, total, page, pageSize: PAGE_SIZE, setPage, loading, error };
+  const refetch = () => setReloadToken((t) => t + 1);
+
+  return { vehicles, total, page, pageSize: PAGE_SIZE, setPage, loading, error, refetch };
 }

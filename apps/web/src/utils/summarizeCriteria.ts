@@ -7,6 +7,9 @@ const currency = new Intl.NumberFormat("en-US", { style: "currency", currency: "
 export function summarizeCriteria(c: DiscoveryPreferences): string[] {
   const chips: string[] = [];
 
+  if (c.zip) chips.push(`${c.zip} · ${c.radiusMiles ?? 50} mi`);
+  else if (c.radiusMiles != null) chips.push(`${c.radiusMiles} mi (default area)`);
+
   if (c.makes?.length) chips.push(c.makes.join(", "));
   if (c.models?.length) chips.push(c.models.join(", "));
 

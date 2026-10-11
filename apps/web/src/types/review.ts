@@ -24,6 +24,24 @@ export interface ReviewQueueItem extends Vehicle {
   highlights: ReviewHighlight[];
 }
 
+// Whitelisted server-side too (apps/worker/src/api/reviewQueue.ts's
+// SORTABLE_COLUMNS) — keep this list in sync with that one. No
+// opportunityScore here — nothing in this queue has one yet (spec §2's
+// history-before-value gate).
+export type ReviewSortColumn = "firstSeenAt" | "price" | "mileage" | "year";
+
+export interface ReviewSort {
+  sortBy: ReviewSortColumn;
+  sortDir: "asc" | "desc";
+}
+
+export interface PagedReviewQueue {
+  items: ReviewQueueItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface HistoryVerificationInput {
   accidentReported: boolean;
   damageReported: boolean;

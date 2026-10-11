@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-// A user-editable subset of SearchCriteria (spec §15) — just the "personal
-// taste" attributes that filter what gets discovered in the first place, so
-// a vehicle outside your taste never enters the pipeline at all (and never
-// reaches manual Carfax review). Location and the requireClean* flags stay
-// fixed (see discoverListings.ts) since changing those isn't what this is
-// for.
+// A user-editable subset of SearchCriteria (spec §15) — the "personal taste"
+// attributes that filter what gets discovered in the first place, so a
+// vehicle outside your taste never enters the pipeline at all (and never
+// reaches manual Carfax review). The requireClean* flags stay fixed (see
+// discoverListings.ts) since changing those isn't what this is for, but
+// location is: each saved search runs its own discovery pass already (one
+// Auto.dev call per watchlist), so giving each one its own ZIP/radius costs
+// nothing extra in API quota and lets you watch more than one area at once.
+// Falls back to the app-wide default location (discoverListings.ts's
+// BASE_CRITERIA/AUTODEV_ZIP) when a saved search doesn't set its own.
 export const discoveryPreferencesSchema = z.object({
   makes: z.array(z.string()).optional(),
   models: z.array(z.string()).optional(),
@@ -14,6 +18,8 @@ export const discoveryPreferencesSchema = z.object({
   mileageMax: z.number().nonnegative().optional(),
   yearMin: z.number().int().optional(),
   yearMax: z.number().int().optional(),
+  zip: z.string().regex(/^\d{5}$/, "Must be a 5-digit ZIP code").optional(),
+  radiusMiles: z.number().positive().max(500).optional(),
 });
 
 export type DiscoveryPreferences = z.infer<typeof discoveryPreferencesSchema>;

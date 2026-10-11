@@ -52,3 +52,13 @@ export interface PagedVehicles {
   limit: number;
   offset: number;
 }
+
+// Dropdown options for FilterBar's Make/Model selects, scoped server-side to
+// whatever set of vehicles that section actually shows (see
+// apps/worker/src/db/vehicleFacets.ts) — so a selection can never be a dead
+// end with zero matching results.
+export interface VehicleFacets {
+  makes: string[];
+  models: string[];
+  modelsByMake: Record<string, string[]>;
+}

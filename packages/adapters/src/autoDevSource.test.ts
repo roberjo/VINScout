@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mapAutoDevListingToRaw, type AutoDevListingItem } from "./autoDevSource";
+import type { SearchCriteria } from "@vinscout/domain";
+import { AutoDevInventorySource, mapAutoDevListingToRaw, type AutoDevListingItem } from "./autoDevSource";
 
 const FETCHED_AT = "2026-09-14T12:00:00.000Z";
 
@@ -86,5 +87,40 @@ describe("mapAutoDevListingToRaw", () => {
       FETCHED_AT,
     );
     expect(raw?.raw.primary_image_url).toBe("https://cdn.example/photo.jpg");
+  });
+});
+
+describe("AutoDevInventorySource.discover location", () => {
+  const BASE_LOCATION: SearchCriteria["location"] = { latitude: 33.0201, longitude: -84.7997, radiusMiles: 50 };
+
+  // Captures the query string of the single request discover() makes.
+  async function requestedParams(criteria: SearchCriteria, config: { zip: string; distanceMiles?: number }) {
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string) => {
+      urls.push(url);
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    await new AutoDevInventorySource({ apiKey: "test", ...config, fetchImpl }).discover(criteria);
+    expect(urls).toHaveLength(1);
+    return new URL(urls[0]).searchParams;
+  }
+
+  it("uses a saved search's own zip and radius over the configured default", async () => {
+    const params = await requestedParams(
+      { location: { ...BASE_LOCATION, zip: "30303", radiusMiles: 25 }, requireCleanHistory: true, requireCleanTitle: true },
+      { zip: "30240", distanceMiles: 50 },
+    );
+    expect(params.get("zip")).toBe("30303");
+    expect(params.get("distance")).toBe("25");
+  });
+
+  it("falls back to the configured zip when the search doesn't set one", async () => {
+    const params = await requestedParams(
+      { location: BASE_LOCATION, requireCleanHistory: true, requireCleanTitle: true },
+      { zip: "30240", distanceMiles: 50 },
+    );
+    expect(params.get("zip")).toBe("30240");
+    expect(params.get("distance")).toBe("50");
   });
 });

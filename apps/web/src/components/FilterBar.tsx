@@ -1,9 +1,10 @@
 import type { CSSProperties } from "react";
-import type { VehicleFilters } from "../types/vehicle";
+import type { VehicleFacets, VehicleFilters } from "../types/vehicle";
 
 interface Props {
   filters: VehicleFilters;
   onChange: (filters: VehicleFilters) => void;
+  facets: VehicleFacets;
 }
 
 const inputStyle: CSSProperties = {
@@ -12,7 +13,7 @@ const inputStyle: CSSProperties = {
   color: "var(--ink-primary)",
 };
 
-export function FilterBar({ filters, onChange }: Props) {
+export function FilterBar({ filters, onChange, facets }: Props) {
   const update = (patch: Partial<VehicleFilters>) => onChange({ ...filters, ...patch });
   const hasFilters =
     filters.make ||
@@ -23,6 +24,11 @@ export function FilterBar({ filters, onChange }: Props) {
     filters.yearMin != null ||
     filters.yearMax != null;
 
+  // Once a make is picked, the model list narrows to only models that
+  // actually co-occur with it — otherwise the full set. Switching make
+  // clears any model selection that wouldn't exist under the new make.
+  const modelOptions = filters.make ? (facets.modelsByMake[filters.make] ?? []) : facets.models;
+
   return (
     <div
       className="mb-4 flex flex-wrap items-end gap-3 rounded-lg p-3"
@@ -30,26 +36,40 @@ export function FilterBar({ filters, onChange }: Props) {
     >
       <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Make
-        <input
-          type="text"
+        <select
           value={filters.make ?? ""}
-          onChange={(e) => update({ make: e.target.value || undefined })}
-          placeholder="Any"
-          className="w-28 rounded px-2 py-1 text-sm"
+          onChange={(e) => {
+            const make = e.target.value || undefined;
+            const modelStillValid = make ? (facets.modelsByMake[make] ?? []).includes(filters.model ?? "") : true;
+            update({ make, model: modelStillValid ? filters.model : undefined });
+          }}
+          className="w-32 rounded px-2 py-1 text-sm"
           style={inputStyle}
-        />
+        >
+          <option value="">Any</option>
+          {facets.makes.map((make) => (
+            <option key={make} value={make}>
+              {make}
+            </option>
+          ))}
+        </select>
       </label>
 
       <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>
         Model
-        <input
-          type="text"
+        <select
           value={filters.model ?? ""}
           onChange={(e) => update({ model: e.target.value || undefined })}
-          placeholder="Any"
-          className="w-28 rounded px-2 py-1 text-sm"
+          className="w-32 rounded px-2 py-1 text-sm"
           style={inputStyle}
-        />
+        >
+          <option value="">Any</option>
+          {modelOptions.map((model) => (
+            <option key={model} value={model}>
+              {model}
+            </option>
+          ))}
+        </select>
       </label>
 
       <label className="flex flex-col gap-1 text-xs font-medium" style={{ color: "var(--ink-muted)" }}>

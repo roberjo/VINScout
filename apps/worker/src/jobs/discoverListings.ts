@@ -6,8 +6,9 @@ import { normalizeListing } from "../normalization/normalizeListing";
 import { persistNormalizedListing } from "./persistListing";
 
 // Spec §16 — default search area (LaGrange/Newnan/Carrollton/Peachtree City, GA).
-// Fixed regardless of saved watchlists — those only narrow price/mileage/
-// year/make/model (see buildCriteria), not the search area.
+// Applies whenever a saved search doesn't set its own ZIP/radius (see
+// buildCriteria) — including the unfiltered pass that runs when there are no
+// saved searches at all.
 const BASE_CRITERIA: SearchCriteria = {
   location: { latitude: 33.0201, longitude: -84.7997, radiusMiles: 50 },
   requireCleanHistory: true,
@@ -48,6 +49,11 @@ async function loadWatchlistCriteria(env: Env): Promise<DiscoveryPreferences[]> 
 function buildCriteria(preferences: DiscoveryPreferences): SearchCriteria {
   return {
     ...BASE_CRITERIA,
+    location: {
+      ...BASE_CRITERIA.location,
+      zip: preferences.zip,
+      radiusMiles: preferences.radiusMiles ?? BASE_CRITERIA.location.radiusMiles,
+    },
     priceMin: preferences.priceMin,
     priceMax: preferences.priceMax,
     mileageMax: preferences.mileageMax,

@@ -1,5 +1,5 @@
-import type { HistoryVerificationInput, ReviewQueueItem } from "../types/review";
-import type { PagedVehicles, VehicleFilters, VehicleSort } from "../types/vehicle";
+import type { HistoryVerificationInput, PagedReviewQueue, ReviewSort } from "../types/review";
+import type { PagedVehicles, VehicleFacets, VehicleFilters, VehicleSort } from "../types/vehicle";
 import type { HistoryEvidenceEntry } from "../types/evidence";
 import type { DiscoveryPreferences, Watchlist } from "../types/preferences";
 
@@ -14,6 +14,18 @@ function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 
 const DEFAULT_PAGE_SIZE = 25;
 
+// Shared by fetchVehicles and fetchReviewQueue — both endpoints accept the
+// same make/model/price/mileage/year filter shape (VehicleFilters).
+function buildFilterParams(params: URLSearchParams, filters: VehicleFilters): void {
+  if (filters.make) params.set("make", filters.make);
+  if (filters.model) params.set("model", filters.model);
+  if (filters.priceMin != null) params.set("priceMin", String(filters.priceMin));
+  if (filters.priceMax != null) params.set("priceMax", String(filters.priceMax));
+  if (filters.mileageMax != null) params.set("mileageMax", String(filters.mileageMax));
+  if (filters.yearMin != null) params.set("yearMin", String(filters.yearMin));
+  if (filters.yearMax != null) params.set("yearMax", String(filters.yearMax));
+}
+
 export async function fetchVehicles(
   filters: VehicleFilters = {},
   sort: VehicleSort = { sortBy: "opportunityScore", sortDir: "desc" },
@@ -26,17 +38,27 @@ export async function fetchVehicles(
     sortBy: sort.sortBy,
     sortDir: sort.sortDir,
   });
-  if (filters.make) params.set("make", filters.make);
-  if (filters.model) params.set("model", filters.model);
-  if (filters.priceMin != null) params.set("priceMin", String(filters.priceMin));
-  if (filters.priceMax != null) params.set("priceMax", String(filters.priceMax));
-  if (filters.mileageMax != null) params.set("mileageMax", String(filters.mileageMax));
-  if (filters.yearMin != null) params.set("yearMin", String(filters.yearMin));
-  if (filters.yearMax != null) params.set("yearMax", String(filters.yearMax));
+  buildFilterParams(params, filters);
 
   const res = await apiFetch(`/api/vehicles?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch vehicles: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchVehicleFacets(): Promise<VehicleFacets> {
+  const res = await apiFetch("/api/vehicles/facets");
+  if (!res.ok) {
+    throw new Error(`Failed to fetch vehicle filter options: ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchReviewQueueFacets(): Promise<VehicleFacets> {
+  const res = await apiFetch("/api/review-queue/facets");
+  if (!res.ok) {
+    throw new Error(`Failed to fetch review queue filter options: ${res.status}`);
   }
   return res.json();
 }
@@ -49,8 +71,21 @@ export async function fetchVehicleEvidence(vin: string): Promise<HistoryEvidence
   return res.json();
 }
 
-export async function fetchReviewQueue(limit = 50): Promise<ReviewQueueItem[]> {
-  const res = await apiFetch(`/api/review-queue?limit=${limit}`);
+export async function fetchReviewQueue(
+  filters: VehicleFilters = {},
+  sort: ReviewSort = { sortBy: "firstSeenAt", sortDir: "desc" },
+  page = 0,
+  limit = DEFAULT_PAGE_SIZE,
+): Promise<PagedReviewQueue> {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(page * limit),
+    sortBy: sort.sortBy,
+    sortDir: sort.sortDir,
+  });
+  buildFilterParams(params, filters);
+
+  const res = await apiFetch(`/api/review-queue?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch review queue: ${res.status}`);
   }

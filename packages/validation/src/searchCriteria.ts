@@ -7,6 +7,7 @@ export const searchCriteriaSchema = z.object({
     latitude: z.number().min(-90).max(90),
     longitude: z.number().min(-180).max(180),
     radiusMiles: z.number().positive(),
+    zip: z.string().regex(/^\d{5}$/, "Must be a 5-digit ZIP code").optional(),
   }),
 
   priceMin: z.number().nonnegative().optional(),
