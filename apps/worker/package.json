@@ -15,12 +15,12 @@
     "@vinscout/scoring": "*",
     "@vinscout/adapters": "*",
     "@vinscout/validation": "*",
-    "hono": "^4.13.16"
+    "hono": "^4.13.18"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261028.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0",
-    "wrangler": "^4.157.0"
+    "wrangler": "^4.160.0"
   }
 }
